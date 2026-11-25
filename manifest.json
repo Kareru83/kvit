@@ -1,17 +1,32 @@
 {
+"id": "./",
 "name": "Kvit — Vyrovnávač společných útrat",
 "short_name": "Kvit",
-"start_url": "./index.html",
+"description": "Offline-first PWA aplikace pro snadné rozpočítání a vyrovnání společných útrat z cest a dovolených.",
+"start_url": "./",
+"scope": "./",
 "display": "standalone",
 "orientation": "portrait",
 "background_color": "#6c42c4",
 "theme_color": "#6c42c4",
 "icons": [
 {
-"src": "data:image/svg+xml;utf8,🤝",
+"src": "./icon-192.png",
+"sizes": "192x192",
+"type": "image/png",
+"purpose": "any"
+},
+{
+"src": "./icon-512.png",
 "sizes": "512x512",
-"type": "image/svg+xml",
-"purpose": "any maskable"
+"type": "image/png",
+"purpose": "any"
+},
+{
+"src": "./icon-512.png",
+"sizes": "512x512",
+"type": "image/png",
+"purpose": "maskable"
 }
 ]
 }

@@ -4,11 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#6c42c4">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Kvit v1.2 — Vyrovnávač společných útrat</title>
+  <meta name="apple-mobile-web-app-title" content="Kvit">
+  <title>Kvit v1.4 — Vyrovnávač společných útrat</title>
   <link rel="manifest" href="./manifest.json">
-  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236c42c4'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='64'>🤝</text></svg>">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
@@ -305,7 +308,6 @@
       display: flex;
     }
 
-    /* Úprava jednotlivého člena vždy nahoře nad nastavením skupiny */
     #editMemberModal {
       z-index: 160 !important;
     }
@@ -341,7 +343,8 @@
       border-radius: 999px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.3);
       display: none;
-      white-space: nowrap;
+      max-width: 92vw;
+      text-align: center;
     }
 
     input, select, textarea {
@@ -442,20 +445,24 @@
   <header class="hero-section" id="heroSection">
     <div class="hero-topbar">
       <div class="flex items-center gap-1.5">
-        <button class="hero-btn" onclick="openModal('drawerModal')" title="Menu Kvit, PDF export, Paměť a Záloha">
+        <button class="hero-btn" onclick="openModal('drawerModal')" title="Menu Kvit, Instalace PWA, PDF export, Paměť a Záloha">
           <span class="text-base">☰</span>
           <span class="text-xs font-black tracking-wider uppercase">Kvit</span>
-          <span class="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full">v1.2</span>
+          <span class="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full">v1.4</span>
         </button>
       </div>
 
       <div class="flex items-center gap-1.5">
-        <button class="hero-btn" onclick="openSyncModal()" title="Synchronizace přes Firebase, Raspberry Pi nebo Offline QR">
+        <button id="heroInstallBtn" class="hero-btn hidden !bg-emerald-500/90 !border-emerald-300" onclick="triggerPwaInstall()" title="Nainstalovat Kvit jako aplikaci do zařízení">
+          <span>📲</span>
+          <span>Instalovat</span>
+        </button>
+        <button class="hero-btn" onclick="openSyncModal()" title="Sdílená synchronizace mezi účastníky výletu, Offline QR nebo Pi Server">
           <span>🔄</span>
           <span>Sync</span>
           <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-slate-400" title="Stav synchronizace"></span>
         </button>
-        <button class="hero-btn" onclick="openEditGroupModal()" title="Upravit členy, měny a skupinu">
+        <button class="hero-btn" onclick="openEditGroupModal()" title="Upravit členy, e-maily účastníků, měny a skupinu">
           <span>Upravit</span>
         </button>
       </div>
@@ -547,13 +554,13 @@
      ========================================================================== -->
 <div id="memberOverviewModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('memberOverviewModal')">
   <div class="modal-sheet">
-    <!-- Hlavička člena -->
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-3 min-w-0">
         <div id="ovMemberAvatar" class="w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-md flex-shrink-0">🤠</div>
         <div class="min-w-0">
           <h3 id="ovMemberName" class="text-lg font-black truncate">--</h3>
           <div id="ovMemberAccount" class="text-xs font-mono text-slate-500 truncate">Účet nezadán</div>
+          <div id="ovMemberEmail" class="text-[11px] text-indigo-600 font-semibold truncate"></div>
         </div>
       </div>
       <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -566,7 +573,6 @@
       </div>
     </div>
 
-    <!-- 4 přehledné karty: Zaplatil za výlet | Náklady na výlet | Vyrovnání & Zálohy | Výsledná bilance -->
     <div class="grid grid-cols-2 gap-2 mb-4">
       <div class="bg-slate-50 border border-slate-200 p-2.5 rounded-2xl">
         <div class="text-[10px] font-extrabold uppercase text-slate-400">💳 Zaplatil(a) za výlet</div>
@@ -590,14 +596,12 @@
       </div>
     </div>
 
-    <!-- Rychlé akce pro daného člověka -->
     <div class="flex gap-2 mb-4">
       <button id="ovBtnAddExpenseByMember" class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm">
         ➕ Přidat platbu od této osoby
       </button>
     </div>
 
-    <!-- Přepínač záložek -->
     <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl mb-3">
       <button id="ovTabBtnPaid" onclick="switchMemberOverviewTab('PAID')" class="py-2 text-[11px] font-extrabold rounded-lg bg-indigo-600 text-white">
         💳 Platil (<span id="ovPaidCount">0</span>)
@@ -705,12 +709,12 @@
 </div>
 
 <!-- ==========================================================================
-     MODÁL: NASTAVENÍ SKUPINY, DESTINACE, VÍCE MĚN & ČLENŮ
+     MODÁL: NASTAVENÍ SKUPINY, DESTINACE, VÍCE MĚN & ČLENŮ (VČ. GOOGLE E-MAILU)
      ========================================================================== -->
 <div id="editGroupModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('editGroupModal')">
   <div class="modal-sheet">
     <div class="flex items-center justify-between mb-3">
-      <h3 class="text-lg font-black">⚙️ Nastavení skupiny & Měn</h3>
+      <h3 class="text-lg font-black">⚙️ Nastavení skupiny & Účastníků</h3>
       <button onclick="closeModal('editGroupModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Hotovo</button>
     </div>
 
@@ -758,11 +762,15 @@
     </div>
 
     <div class="mb-3">
-      <div class="text-xs font-extrabold text-slate-700 mb-2">👥 Členové skupiny (klepnutím se otevře úprava navrchu)</div>
+      <div class="text-xs font-extrabold text-slate-700 mb-1">👥 Členové skupiny (klepnutím upravíte jméno, účet i Google e-mail)</div>
+      <div class="text-[11px] text-slate-500 mb-2">💡 Zadejte Google e-mail účastníka — po přihlášení se mu tento výlet automaticky zobrazí a bude se živě synchronizovat.</div>
+      <div class="grid grid-cols-12 gap-1.5 mb-1.5">
+        <input type="text" id="newMemNameInp" placeholder="Jméno (např. Jana)" class="col-span-6 px-2.5 py-2 rounded-xl border border-slate-300 text-xs font-bold">
+        <input type="text" id="newMemAccInp" placeholder="Účet (123456/0800)" class="col-span-6 px-2.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+      </div>
       <div class="grid grid-cols-12 gap-1.5 mb-2">
-        <input type="text" id="newMemNameInp" placeholder="Jméno (např. Karel)" class="col-span-5 px-2.5 py-2 rounded-xl border border-slate-300 text-xs font-bold">
-        <input type="text" id="newMemAccInp" placeholder="Účet (123456/0800)" class="col-span-5 px-2.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
-        <button onclick="addMemberToActiveGroup()" class="col-span-2 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black">+ Člen</button>
+        <input type="email" id="newMemEmailInp" placeholder="Google e-mail účastníka (volitelné)" class="col-span-9 px-2.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold">
+        <button onclick="addMemberToActiveGroup()" class="col-span-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black">+ Člen</button>
       </div>
       <div id="editMembersListBox" class="space-y-2 max-h-48 overflow-y-auto"></div>
     </div>
@@ -779,7 +787,7 @@
 </div>
 
 <!-- ==========================================================================
-     MODÁL: ÚPRAVA JEDNOTLIVÉHO ČLENA
+     MODÁL: ÚPRAVA JEDNOTLIVÉHO ČLENA (VČ. GOOGLE E-MAILU PRO SDÍLENÍ)
      ========================================================================== -->
 <div id="editMemberModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('editMemberModal')">
   <div class="modal-sheet shadow-2xl border-t-4 border-indigo-600">
@@ -793,6 +801,12 @@
     <div class="mb-3">
       <label class="block text-xs font-bold text-slate-500 mb-1">Jméno člena</label>
       <input type="text" id="editMemberNameInp" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">
+    </div>
+
+    <div class="mb-3">
+      <label class="block text-xs font-bold text-indigo-700 mb-1">🔥 Google e-mail (pro sdílení tohoto výletu)</label>
+      <input type="email" id="editMemberEmailInp" placeholder="napr. kamarad@gmail.com" class="w-full px-3.5 py-2.5 rounded-xl border border-indigo-300 bg-indigo-50/30 font-semibold text-sm">
+      <span class="text-[11px] text-slate-500 mt-1 block">Když se tento uživatel přihlásí do Kvitu přes Google, uvidí tento výlet a všechny jeho útraty živě.</span>
     </div>
 
     <div class="grid grid-cols-2 gap-3 mb-3">
@@ -924,21 +938,21 @@
 </div>
 
 <!-- ==========================================================================
-     MODÁL: SYNCHRONIZACE (FIREBASE CLOUD + OFFLINE QR + RASPBERRY PI)
+     MODÁL: SYNCHRONIZACE (ŽIVÁ SDÍLENÁ FIREBASE + OFFLINE QR + RASPBERRY PI)
      ========================================================================== -->
 <div id="syncModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('syncModal')">
   <div class="modal-sheet">
     <div class="flex items-center justify-between mb-3">
       <div>
-        <h3 class="text-lg font-black">🔄 Synchronizace dat</h3>
-        <p class="text-xs text-slate-500">Firebase Cloud účet, Offline QR nebo vlastní Pi Server</p>
+        <h3 class="text-lg font-black">🔄 Sdílená synchronizace</h3>
+        <p class="text-xs text-slate-500">Všichni účastníci výletu vidí nové útraty živě</p>
       </div>
       <button onclick="closeModal('syncModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Zavřít</button>
     </div>
 
     <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl mb-4">
       <button id="syncTabBtnFirebase" onclick="switchSyncTab('FIREBASE')" class="py-2.5 text-xs font-extrabold rounded-lg bg-indigo-600 text-white">
-        🔥 Firebase
+        🔥 Firebase Live
       </button>
       <button id="syncTabBtnOffline" onclick="switchSyncTab('OFFLINE')" class="py-2.5 text-xs font-extrabold rounded-lg text-slate-700">
         📲 Offline QR
@@ -948,11 +962,11 @@
       </button>
     </div>
 
-    <!-- FIREBASE CLOUD SYNC -->
+    <!-- FIREBASE CLOUD LIVE SYNC -->
     <div id="syncFirebasePanel">
       <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-3">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-extrabold text-indigo-950">🔥 Firebase Cloud účet</span>
+          <span class="text-xs font-extrabold text-indigo-950">🔥 Živý Cloud pro účastníky výletu</span>
           <span id="fbSyncStatusBadge" class="text-[11px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">Odhlášeno</span>
         </div>
 
@@ -968,22 +982,39 @@
           👤 Přihlásit se přes Google
         </button>
 
-        <div id="fbManualSyncControls" class="hidden grid grid-cols-2 gap-2">
-          <button onclick="window.KvitFirebase?.saveToCloud(true)" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">
-            ⬆️ Odeslat do Cloudu
-          </button>
-          <button onclick="window.KvitFirebase?.loadFromCloud(true)" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black">
-            ⬇️ Stáhnout z Cloudu
-          </button>
+        <div id="fbSharedTripControls" class="hidden space-y-3 border-t border-indigo-200 pt-3">
+          <div class="bg-white p-2.5 rounded-xl border border-indigo-200">
+            <div class="text-[10px] font-bold uppercase text-slate-500 mb-1">Kód tohoto výletu (pošli spolucestujícím):</div>
+            <div class="flex items-center justify-between gap-2">
+              <span id="fbActiveTripCodeDisplay" class="font-mono text-base font-black text-indigo-700 tracking-wider">ROAD01</span>
+              <div class="flex gap-1.5">
+                <button onclick="copyActiveTripShareCode()" class="px-2.5 py-1.5 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-900 text-xs font-bold">📋 Kód</button>
+                <button onclick="openEditGroupModal(); closeModal('syncModal');" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold">✉️ E-maily členů</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white p-2.5 rounded-xl border border-emerald-200">
+            <div class="text-[10px] font-bold uppercase text-emerald-800 mb-1">Připojit se k výletu kamaráda (zadáním kódu):</div>
+            <div class="flex gap-1.5">
+              <input type="text" id="fbJoinTripCodeInp" maxlength="12" placeholder="Např. ROAD01" class="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-xs font-black uppercase">
+              <button onclick="window.KvitFirebase?.joinTripByCode()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">🔗 Připojit</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="window.KvitFirebase?.syncActiveGroup(true)" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">
+              ⬆️ Vynutit odeslání
+            </button>
+            <button onclick="window.KvitFirebase?.refreshMyTrips(true)" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black">
+              ⬇️ Načíst moje výlety
+            </button>
+          </div>
         </div>
 
         <div id="fbLastSyncText" class="text-[10px] text-indigo-800/75 font-mono text-center mt-2">
-          Po přihlášení se všechny skupiny a útraty ukládají automaticky.
+          Po přihlášení se zobrazí jen výlety, kterých se účastníte.
         </div>
-      </div>
-
-      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-[11px] text-slate-600">
-        💡 Data se ukládají do vašeho soukromého účtu v projektu <strong>h5page-app</strong> pod samostatným klíčem <code>kvitState</code>, takže nepřepíšou záložky z H5Page.
       </div>
     </div>
 
@@ -1090,7 +1121,7 @@
 </div>
 
 <!-- ==========================================================================
-     MODÁL: HAMBURGER MENU KVIT
+     MODÁL: HAMBURGER MENU KVIT (VČ. INSTALACE PWA)
      ========================================================================== -->
 <div id="drawerModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('drawerModal')">
   <div class="modal-sheet">
@@ -1099,10 +1130,21 @@
         <span class="text-xl">🤝</span>
         <div>
           <h3 class="text-base font-black">Kvit</h3>
-          <span class="text-[11px] font-extrabold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">verze 1.2 (v1.2.0)</span>
+          <span class="text-[11px] font-extrabold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">verze 1.4 (v1.4.0)</span>
         </div>
       </div>
       <button onclick="closeModal('drawerModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Zavřít</button>
+    </div>
+
+    <!-- Instalace PWA aplikace do zařízení -->
+    <div class="mb-3 bg-indigo-50 border border-indigo-200 p-3 rounded-2xl">
+      <button id="drawerInstallPwaBtn" onclick="triggerPwaInstall()" class="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm">
+        <span>📲</span>
+        <span id="drawerInstallPwaLabel">Nainstalovat Kvit jako aplikaci (PWA)</span>
+      </button>
+      <div id="pwaStatusSubtext" class="text-[10px] text-indigo-800/80 text-center mt-1.5 font-medium">
+        Kontroluji připravenost pro instalaci na plochu...
+      </div>
     </div>
 
     <div class="mb-3">
@@ -1136,7 +1178,7 @@
     </div>
 
     <div class="text-center text-[11px] text-slate-400 font-semibold pt-2 border-t border-slate-100">
-      Kvit • verze 1.2 • Jsme si kvit — Více měn, vlastní kurzy, Firebase synchronizace a oddělená vyrovnání
+      Kvit • verze 1.4 • Offline PWA & Živá synchronizace výletů
     </div>
   </div>
 </div>
@@ -1146,11 +1188,13 @@
      ========================================================================== -->
 <div id="printReportArea"></div>
 
-<!-- FIREBASE SDK & CLOUD SYNCHRONIZACE (h5page-app) -->
+<!-- FIREBASE SDK & ŽIVÁ SDÍLENÁ SYNCHRONIZACE MEZI ÚČASTNÍKY VÝLETU -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, where, onSnapshot, arrayUnion, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDWlKHYc2M4kQ_rjDeEW7_reG8XcMCC1tM",
@@ -1169,18 +1213,19 @@ const provider = new GoogleAuthProvider();
 
 window.KvitFirebase = {
   currentUser: null,
-  isSyncing: false,
+  unsubUidListener: null,
+  unsubEmailListener: null,
+  switchedToCloudTripOnce: false,
 
   updateUI(user) {
     const dot = document.getElementById('cloudStatusDot');
-
     const badge = document.getElementById('fbSyncStatusBadge');
     const infoBox = document.getElementById('fbUserInfoBox');
     const modalAvatar = document.getElementById('fbModalAvatar');
     const modalName = document.getElementById('fbModalName');
     const modalEmail = document.getElementById('fbModalEmail');
     const modalBtn = document.getElementById('fbModalAuthBtn');
-    const manualControls = document.getElementById('fbManualSyncControls');
+    const sharedControls = document.getElementById('fbSharedTripControls');
 
     if (user) {
       const initial = encodeURIComponent((user.displayName || 'U').charAt(0).toUpperCase());
@@ -1188,9 +1233,8 @@ window.KvitFirebase = {
       const photo = user.photoURL || fallbackAvatar;
 
       if (dot) dot.style.backgroundColor = '#34d399';
-
       if (badge) {
-        badge.textContent = 'Přihlášeno';
+        badge.textContent = 'Live připojeno';
         badge.className = 'text-[11px] font-bold bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded-full';
       }
       if (infoBox) infoBox.classList.remove('hidden');
@@ -1204,10 +1248,9 @@ window.KvitFirebase = {
         modalBtn.textContent = '🚪 Odhlásit se z Google účtu';
         modalBtn.className = 'w-full py-2.5 px-4 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-black mb-3';
       }
-      if (manualControls) manualControls.classList.remove('hidden');
+      if (sharedControls) sharedControls.classList.remove('hidden');
     } else {
       if (dot) dot.style.backgroundColor = '#94a3b8';
-
       if (badge) {
         badge.textContent = 'Odhlášeno';
         badge.className = 'text-[11px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full';
@@ -1217,17 +1260,68 @@ window.KvitFirebase = {
         modalBtn.textContent = '👤 Přihlásit se přes Google';
         modalBtn.className = 'w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm mb-3';
       }
-      if (manualControls) manualControls.classList.add('hidden');
+      if (sharedControls) sharedControls.classList.add('hidden');
+    }
+  },
+
+  stopListeners() {
+    if (this.unsubUidListener) { this.unsubUidListener(); this.unsubUidListener = null; }
+    if (this.unsubEmailListener) { this.unsubEmailListener(); this.unsubEmailListener = null; }
+  },
+
+  startRealtimeListeners() {
+    this.stopListeners();
+    if (!this.currentUser) return;
+
+    const uid = this.currentUser.uid;
+    const email = (this.currentUser.email || '').trim().toLowerCase();
+
+    const handleSnapshot = (snapshot) => {
+      let anyUpdated = false;
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added' || change.type === 'modified') {
+          const remoteGrp = change.doc.data();
+          if (!remoteGrp || !remoteGrp.id) return;
+
+          if (uid && Array.isArray(remoteGrp.participantUids) && !remoteGrp.participantUids.includes(uid)) {
+            updateDoc(doc(db, 'kvit_groups', remoteGrp.id), {
+              participantUids: arrayUnion(uid)
+            }).catch(() => {});
+          }
+
+          if (typeof window.mergeRemoteGroupIntoLocal === 'function') {
+            const changed = window.mergeRemoteGroupIntoLocal(remoteGrp, uid);
+            if (changed) anyUpdated = true;
+          }
+        }
+      });
+
+      if (anyUpdated) {
+        const lbl = document.getElementById('fbLastSyncText');
+        if (lbl) lbl.textContent = `Živá synchronizace: ${new Date().toLocaleTimeString('cs-CZ')}`;
+      }
+    };
+
+    const qUid = query(collection(db, 'kvit_groups'), where('participantUids', 'array-contains', uid));
+    this.unsubUidListener = onSnapshot(qUid, handleSnapshot, (err) => {
+      console.warn('Firestore UID listener:', err);
+    });
+
+    if (email) {
+      const qEmail = query(collection(db, 'kvit_groups'), where('participantEmails', 'array-contains', email));
+      this.unsubEmailListener = onSnapshot(qEmail, handleSnapshot, (err) => {
+        console.warn('Firestore Email listener:', err);
+      });
     }
   },
 
   async handleAuthAction() {
     if (this.currentUser) {
       try {
+        this.stopListeners();
         await signOut(auth);
         if (typeof showToast === 'function') showToast('🚪 Odhlášeno z Firebase');
       } catch (err) {
-        console.error('Chyba odhlášení:', err);
         if (typeof showToast === 'function') showToast('❌ Chyba při odhlášení');
       }
     } else {
@@ -1241,70 +1335,149 @@ window.KvitFirebase = {
     }
   },
 
-  async loadFromCloud(manual = false) {
-    if (!this.currentUser || this.isSyncing) return;
-    this.isSyncing = true;
-    try {
-      const docRef = doc(db, 'users', this.currentUser.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists() && docSnap.data().kvitState) {
-        const cloudState = docSnap.data().kvitState;
-        if (cloudState && Array.isArray(cloudState.groups) && typeof window.applyCloudAppState === 'function') {
-          window.applyCloudAppState(cloudState);
-          const lbl = document.getElementById('fbLastSyncText');
-          if (lbl) lbl.textContent = `Staženo z cloudu: ${new Date().toLocaleTimeString('cs-CZ')}`;
-          if (typeof showToast === 'function') showToast('☁️ Data Kvitu stažena z Firebase');
-        }
-      } else {
-        await this.saveToCloud(false);
-        if (manual && typeof showToast === 'function') showToast('☁️ Lokální data poprvé uložena do Firebase');
+  buildParticipantsMeta(grp) {
+    const uidSet = new Set(Array.isArray(grp.participantUids) ? grp.participantUids : []);
+    const emailSet = new Set(Array.isArray(grp.participantEmails) ? grp.participantEmails.map(e => String(e).toLowerCase().trim()).filter(Boolean) : []);
+
+    if (this.currentUser) {
+      uidSet.add(this.currentUser.uid);
+      if (this.currentUser.email) {
+        emailSet.add(this.currentUser.email.trim().toLowerCase());
       }
-    } catch (err) {
-      console.error('Chyba čtení Firebase:', err);
-      if (typeof showToast === 'function') showToast('❌ Chyba při stahování z Firebase');
-    } finally {
-      this.isSyncing = false;
     }
+
+    (grp.members || []).forEach(m => {
+      if (m.email && String(m.email).trim()) {
+        emailSet.add(String(m.email).trim().toLowerCase());
+      }
+    });
+
+    return {
+      participantUids: Array.from(uidSet),
+      participantEmails: Array.from(emailSet)
+    };
   },
 
-  async saveToCloud(manual = false) {
-    if (!this.currentUser || typeof window.getAppStateForCloud !== 'function') return;
+  async syncGroupToCloud(grp, manual = false) {
+    if (!this.currentUser || !grp || grp.isTemplate) return;
     try {
-      const cleanState = JSON.parse(JSON.stringify(window.getAppStateForCloud()));
-      const docRef = doc(db, 'users', this.currentUser.uid);
-      await setDoc(docRef, {
-        kvitState: cleanState,
-        kvitUpdatedAt: serverTimestamp()
+      if (!grp.syncCode) {
+        grp.syncCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      }
+      const code = grp.syncCode.trim().toUpperCase();
+      const meta = this.buildParticipantsMeta(grp);
+      grp.participantUids = meta.participantUids;
+      grp.participantEmails = meta.participantEmails;
+
+      const cleanGrp = JSON.parse(JSON.stringify({
+        ...grp,
+        syncCode: code,
+        participantUids: meta.participantUids,
+        participantEmails: meta.participantEmails,
+        lastSenderUid: this.currentUser.uid,
+        groupUpdatedAt: Date.now(),
+        serverUpdatedAt: serverTimestamp()
+      }));
+
+      await setDoc(doc(db, 'kvit_groups', grp.id), cleanGrp, { merge: true });
+
+      await setDoc(doc(db, 'kvit_codes', code), {
+        groupId: grp.id,
+        name: grp.name || 'Výlet',
+        updatedAt: Date.now()
       }, { merge: true });
 
       const lbl = document.getElementById('fbLastSyncText');
-      if (lbl) lbl.textContent = `Uloženo do cloudu: ${new Date().toLocaleTimeString('cs-CZ')}`;
-      if (manual && typeof showToast === 'function') showToast('☁️ Uloženo do Firebase');
+      if (lbl) lbl.textContent = `Odesláno všem: ${new Date().toLocaleTimeString('cs-CZ')}`;
+      if (manual && typeof showToast === 'function') showToast('☁️ Výlet odeslán všem účastníkům');
     } catch (err) {
-      console.error('Chyba zápisu Firebase:', err);
-      if (manual && typeof showToast === 'function') showToast('❌ Chyba při ukládání do Firebase');
+      console.error('Chyba synchronizace výletu:', err);
+      if (manual && typeof showToast === 'function') showToast('❌ Chyba synchronizace (zkontroluj Rules ve Firestore)');
+    }
+  },
+
+  async syncActiveGroup(manual = false) {
+    if (typeof getActiveGroup !== 'function') return;
+    const grp = getActiveGroup();
+    if (grp.isTemplate) {
+      grp.isTemplate = false;
+    }
+    await this.syncGroupToCloud(grp, manual);
+  },
+
+  async refreshMyTrips(manual = false) {
+    if (!this.currentUser) return;
+    this.startRealtimeListeners();
+    if (manual && typeof showToast === 'function') showToast('🔄 Kontrola sdílených výletů...');
+  },
+
+  async joinTripByCode() {
+    if (!this.currentUser) {
+      if (typeof showToast === 'function') showToast('⚠️ Nejprve se přihlaste přes Google');
+      return;
+    }
+    const inp = document.getElementById('fbJoinTripCodeInp');
+    const code = (inp?.value || '').trim().toUpperCase();
+    if (!code) {
+      if (typeof showToast === 'function') showToast('⚠️ Zadejte kód výletu');
+      return;
+    }
+
+    try {
+      const codeSnap = await getDoc(doc(db, 'kvit_codes', code));
+      if (!codeSnap.exists() || !codeSnap.data().groupId) {
+        if (typeof showToast === 'function') showToast('❌ Výlet s tímto kódem nebyl nalezen');
+        return;
+      }
+
+      const groupId = codeSnap.data().groupId;
+      const uid = this.currentUser.uid;
+      const email = (this.currentUser.email || '').trim().toLowerCase();
+
+      const updatePayload = {
+        participantUids: arrayUnion(uid)
+      };
+      if (email) {
+        updatePayload.participantEmails = arrayUnion(email);
+      }
+
+      await updateDoc(doc(db, 'kvit_groups', groupId), updatePayload);
+      if (inp) inp.value = '';
+      if (typeof showToast === 'function') showToast(`✅ Připojeno k výletu ${code}! Načítám data...`);
+      this.startRealtimeListeners();
+    } catch (err) {
+      console.error('Chyba při připojování ke skupině:', err);
+      if (typeof showToast === 'function') showToast('❌ Nepodařilo se připojit (zkontroluj kód a pravidla Firestore)');
     }
   }
 };
 
 onAuthStateChanged(auth, async (user) => {
   window.KvitFirebase.currentUser = user;
+  window.KvitFirebase.switchedToCloudTripOnce = false;
   window.KvitFirebase.updateUI(user);
   if (user) {
-    await window.KvitFirebase.loadFromCloud(false);
+    window.KvitFirebase.startRealtimeListeners();
+    if (typeof window.pushLocalNonTemplateGroups === 'function') {
+      await window.pushLocalNonTemplateGroups();
+    }
+  } else {
+    window.KvitFirebase.stopListeners();
   }
 });
 </script>
 
 <script>
 /* ============================================================================
-   1. GLOBÁLNÍ DATA & KONFIGURACE v1.2
+   1. GLOBÁLNÍ DATA & KONFIGURACE v1.4
    ============================================================================ */
-const APP_VERSION = '1.2.0';
-const STORAGE_KEY = 'KVIT_APP_DATA_V12';
+const APP_VERSION = '1.4.0';
+const STORAGE_KEY = 'KVIT_APP_DATA_V14';
 const SERVER_URL_KEY = 'KVIT_PI_SERVER_URL';
 const MAX_STORAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_PI_SERVER_URL = 'http://raspberrypi.local/sync.php';
+
+let deferredInstallPrompt = null;
 
 const THEME_PALETTES = {
   purple:  { bg: '#6c42c4', dark: '#522ca0', meta: '#6c42c4' },
@@ -1352,7 +1525,7 @@ function getDefaultDemoState() {
     groups: [
       {
         id: 'grp-roadtrip',
-        name: 'Road Trip',
+        name: 'Road Trip (Vzor)',
         destination: 'Rakousko • Slovinsko • Chorvatsko',
         syncCode: 'ROAD01',
         theme: 'purple',
@@ -1365,11 +1538,14 @@ function getDefaultDemoState() {
           { code: 'CZK', rate: 1.00 }
         ],
         isTemplate: true,
+        deletedExpenseIds: [],
+        participantUids: [],
+        participantEmails: [],
         members: [
-          { id: 'm-kaylee', name: 'Kaylee', emoji: '🦊', color: '#059669', weight: 1, account: '123456789/0800' },
-          { id: 'm-zoe', name: 'Zoe', emoji: '🐼', color: '#0284c7', weight: 1, account: '987654321/0100' },
-          { id: 'm-malcolm', name: 'Malcolm', emoji: '🤠', color: '#d97706', weight: 1, account: '2200112233/2010' },
-          { id: 'm-jayne', name: 'Jayne', emoji: '😎', color: '#7c3aed', weight: 1, account: '1122334455/0300' }
+          { id: 'm-kaylee', name: 'Kaylee', emoji: '🦊', color: '#059669', weight: 1, account: '123456789/0800', email: '' },
+          { id: 'm-zoe', name: 'Zoe', emoji: '🐼', color: '#0284c7', weight: 1, account: '987654321/0100', email: '' },
+          { id: 'm-malcolm', name: 'Malcolm', emoji: '🤠', color: '#d97706', weight: 1, account: '2200112233/2010', email: '' },
+          { id: 'm-jayne', name: 'Jayne', emoji: '😎', color: '#7c3aed', weight: 1, account: '1122334455/0300', email: '' }
         ],
         expenses: [
           {
@@ -1433,6 +1609,9 @@ function getDefaultDemoState() {
 function normalizeGroupCurrencies(grp) {
   if (!grp) return;
   if (!grp.destination) grp.destination = '';
+  if (!Array.isArray(grp.deletedExpenseIds)) grp.deletedExpenseIds = [];
+  if (!Array.isArray(grp.participantUids)) grp.participantUids = [];
+  if (!Array.isArray(grp.participantEmails)) grp.participantEmails = [];
   if (!Array.isArray(grp.currencies) || grp.currencies.length === 0) {
     const mainCode = (grp.currency || 'EUR').toUpperCase();
     const mainRate = Number(grp.rateToCzk) || (mainCode === 'CZK' ? 1 : 25.0);
@@ -1460,6 +1639,8 @@ function getCurrencyDefaultRateToCzk(grp, code) {
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
+      || localStorage.getItem('KVIT_APP_DATA_V13')
+      || localStorage.getItem('KVIT_APP_DATA_V12')
       || localStorage.getItem('KVIT_APP_DATA_V11')
       || localStorage.getItem('KVIT_APP_DATA_V10')
       || localStorage.getItem('KVIT_APP_DATA_V05')
@@ -1497,20 +1678,114 @@ function saveState(skipCloud = false) {
   updateStorageMeter();
 
   if (!skipCloud && window.KvitFirebase && window.KvitFirebase.currentUser) {
-    window.KvitFirebase.saveToCloud(false);
+    const activeGrp = getActiveGroup();
+    if (activeGrp && !activeGrp.isTemplate) {
+      window.KvitFirebase.syncGroupToCloud(activeGrp, false);
+    }
   }
 }
 
-window.getAppStateForCloud = function() {
-  return appState;
+window.mergeRemoteGroupIntoLocal = function(remoteGrp, myUid) {
+  if (!remoteGrp || !remoteGrp.id) return false;
+  normalizeGroupCurrencies(remoteGrp);
+  remoteGrp.isTemplate = false;
+
+  const existingIdx = appState.groups.findIndex(g => g.id === remoteGrp.id);
+  let hasVisualChanges = false;
+
+  if (existingIdx === -1) {
+    appState.groups.push(remoteGrp);
+    const currentGrp = getActiveGroup();
+    if (currentGrp && currentGrp.isTemplate && !window.KvitFirebase.switchedToCloudTripOnce) {
+      appState.activeGroupId = remoteGrp.id;
+      window.KvitFirebase.switchedToCloudTripOnce = true;
+    }
+    hasVisualChanges = true;
+  } else {
+    const localGrp = appState.groups[existingIdx];
+    normalizeGroupCurrencies(localGrp);
+
+    const deletedSet = new Set([
+      ...(localGrp.deletedExpenseIds || []),
+      ...(remoteGrp.deletedExpenseIds || [])
+    ]);
+    localGrp.deletedExpenseIds = Array.from(deletedSet);
+
+    localGrp.participantUids = Array.from(new Set([
+      ...(localGrp.participantUids || []),
+      ...(remoteGrp.participantUids || [])
+    ]));
+    localGrp.participantEmails = Array.from(new Set([
+      ...(localGrp.participantEmails || []),
+      ...(remoteGrp.participantEmails || [])
+    ]));
+
+    const memberMap = new Map();
+    (localGrp.members || []).forEach(m => memberMap.set(m.id, m));
+    (remoteGrp.members || []).forEach(rm => {
+      const lm = memberMap.get(rm.id);
+      if (!lm) {
+        memberMap.set(rm.id, rm);
+        hasVisualChanges = true;
+      } else if (JSON.stringify(lm) !== JSON.stringify(rm) && remoteGrp.lastSenderUid !== myUid) {
+        memberMap.set(rm.id, { ...lm, ...rm });
+        hasVisualChanges = true;
+      }
+    });
+    localGrp.members = Array.from(memberMap.values());
+
+    const expMap = new Map();
+    (localGrp.expenses || []).forEach(e => {
+      if (!deletedSet.has(e.id)) expMap.set(e.id, e);
+    });
+
+    (remoteGrp.expenses || []).forEach(re => {
+      if (deletedSet.has(re.id)) return;
+      const le = expMap.get(re.id);
+      if (!le) {
+        expMap.set(re.id, re);
+        hasVisualChanges = true;
+      } else if ((re.updatedAt || 0) > (le.updatedAt || 0)) {
+        expMap.set(re.id, re);
+        hasVisualChanges = true;
+      }
+    });
+
+    const beforeCount = (localGrp.expenses || []).length;
+    localGrp.expenses = Array.from(expMap.values()).filter(e => !deletedSet.has(e.id));
+    if (localGrp.expenses.length !== beforeCount) hasVisualChanges = true;
+
+    if (remoteGrp.lastSenderUid && remoteGrp.lastSenderUid !== myUid) {
+      if (localGrp.name !== remoteGrp.name || localGrp.destination !== remoteGrp.destination || localGrp.theme !== remoteGrp.theme) {
+        localGrp.name = remoteGrp.name;
+        localGrp.destination = remoteGrp.destination;
+        localGrp.theme = remoteGrp.theme;
+        hasVisualChanges = true;
+      }
+      if (Array.isArray(remoteGrp.currencies)) {
+        localGrp.currencies = remoteGrp.currencies;
+        normalizeGroupCurrencies(localGrp);
+      }
+    }
+  }
+
+  saveState(true);
+  if (hasVisualChanges) {
+    renderApp();
+    if (remoteGrp.lastSenderUid && remoteGrp.lastSenderUid !== myUid && typeof showToast === 'function') {
+      showToast(`☁️ Aktualizace výletu "${remoteGrp.name}"`);
+    }
+  }
+  return hasVisualChanges;
 };
 
-window.applyCloudAppState = function(cloudState) {
-  appState = cloudState;
-  appState.version = APP_VERSION;
-  (appState.groups || []).forEach(normalizeGroupCurrencies);
-  saveState(true);
-  renderApp();
+window.pushLocalNonTemplateGroups = async function() {
+  if (!window.KvitFirebase || !window.KvitFirebase.currentUser) return;
+  for (const grp of (appState.groups || [])) {
+    if (!grp.isTemplate) {
+      await window.KvitFirebase.syncGroupToCloud(grp, false);
+    }
+  }
 };
 
 function getActiveGroup() {
@@ -2063,6 +2338,8 @@ function openMemberOverviewModal(memberId) {
 
   document.getElementById('ovMemberName').textContent = mem.name;
   document.getElementById('ovMemberAccount').textContent = mem.account ? `Účet: ${mem.account}` : 'Bankovní účet nezadán';
+  const emailEl = document.getElementById('ovMemberEmail');
+  if (emailEl) emailEl.textContent = mem.email ? `🔥 ${mem.email}` : '';
 
   document.getElementById('ovBtnEditMember').onclick = () => {
     openEditSingleMemberModal(memberId);
@@ -2242,6 +2519,7 @@ function openEditSingleMemberModal(memberId) {
 
   document.getElementById('editMemberIdInp').value = mem.id;
   document.getElementById('editMemberNameInp').value = mem.name || '';
+  document.getElementById('editMemberEmailInp').value = mem.email || '';
   document.getElementById('editMemberEmojiInp').value = mem.emoji || '🤠';
   document.getElementById('editMemberColorInp').value = mem.color || '#0284c7';
   document.getElementById('editMemberAccountInp').value = mem.account || '';
@@ -2262,9 +2540,11 @@ function saveMemberEdits() {
   }
 
   mem.name = newName;
+  mem.email = document.getElementById('editMemberEmailInp').value.trim().toLowerCase();
   mem.emoji = document.getElementById('editMemberEmojiInp').value;
   mem.color = document.getElementById('editMemberColorInp').value;
   mem.account = document.getElementById('editMemberAccountInp').value.trim();
+  grp.isTemplate = false;
 
   saveState();
   closeModal('editMemberModal');
@@ -2291,6 +2571,7 @@ function deleteMemberWithButton() {
   }
 
   grp.members = grp.members.filter(m => m.id !== mId);
+  grp.isTemplate = false;
   saveState();
   closeModal('editMemberModal');
   renderApp();
@@ -2552,6 +2833,8 @@ function saveExpenseFromModal() {
     }
   }
 
+  grp.isTemplate = false;
+
   if (editingId) {
     const tx = (grp.expenses || []).find(t => t.id === editingId);
     if (tx) {
@@ -2605,6 +2888,11 @@ function deleteCurrentExpenseWithButton() {
   const tx = (grp.expenses || []).find(t => t.id === editingId);
   const name = tx ? tx.title : 'Výdaj';
 
+  if (!Array.isArray(grp.deletedExpenseIds)) grp.deletedExpenseIds = [];
+  if (!grp.deletedExpenseIds.includes(editingId)) {
+    grp.deletedExpenseIds.push(editingId);
+  }
+  grp.isTemplate = false;
   grp.expenses = grp.expenses.filter(t => t.id !== editingId);
   saveState();
   closeModal('expenseModal');
@@ -2958,6 +3246,7 @@ function confirmDragSettlePayment() {
   const settleType = document.getElementById('dragSettleTypeInp').value || 'Vyrovnání';
   const settleMethod = document.getElementById('dragSettleMethodInp').value || 'CARD';
 
+  grp.isTemplate = false;
   grp.expenses.unshift({
     id: 'tx-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
     title: settleType === 'Záloha' ? 'Platba zálohy' : 'Vyrovnání dluhu',
@@ -3016,6 +3305,11 @@ function renderApp() {
     currBadge.textContent = (grp.currencies || []).map(c => c.code).join(' • ');
   }
 
+  const tripCodeDisp = document.getElementById('fbActiveTripCodeDisplay');
+  if (tripCodeDisp) {
+    tripCodeDisp.textContent = grp.syncCode || 'ROAD01';
+  }
+
   renderGroupTabsBar(grp);
   buildBubblesForGroup(grp);
   renderTransactionsFeed();
@@ -3046,7 +3340,7 @@ function switchGroup(groupId) {
   const found = appState.groups.find(g => g.id === groupId);
   if (!found) return;
   appState.activeGroupId = found.id;
-  saveState();
+  saveState(true);
   renderApp();
 }
 
@@ -3209,6 +3503,7 @@ function updateGroupCurrencyRate(idx, val) {
   grp.currencies[idx].rate = rate;
   grp.currency = grp.currencies[0].code;
   grp.rateToCzk = grp.currencies[0].rate;
+  grp.isTemplate = false;
   saveState();
   renderApp();
 }
@@ -3220,6 +3515,7 @@ function setPrimaryCurrency(idx) {
   grp.currencies.unshift(chosen);
   grp.currency = grp.currencies[0].code;
   grp.rateToCzk = grp.currencies[0].rate;
+  grp.isTemplate = false;
   saveState();
   renderGroupCurrenciesEditor();
   renderApp();
@@ -3254,6 +3550,7 @@ function addCurrencyToGroup() {
     }
   }
 
+  grp.isTemplate = false;
   codeInp.value = '';
   rateInp.value = '';
   saveState();
@@ -3268,6 +3565,7 @@ function removeGroupCurrency(idx) {
   const removed = grp.currencies.splice(idx, 1)[0];
   grp.currency = grp.currencies[0].code;
   grp.rateToCzk = grp.currencies[0].rate;
+  grp.isTemplate = false;
   saveState();
   renderGroupCurrenciesEditor();
   renderApp();
@@ -3283,6 +3581,7 @@ function saveGroupHeaderSettings() {
   grp.name = document.getElementById('grpEditNameInp').value.trim() || grp.name;
   grp.destination = document.getElementById('grpEditDestInp').value.trim();
   grp.theme = document.getElementById('grpEditThemeInp').value || 'purple';
+  grp.isTemplate = false;
   normalizeGroupCurrencies(grp);
   saveState();
   renderApp();
@@ -3295,13 +3594,13 @@ function renderEditMembersList() {
   box.innerHTML = (grp.members || []).map(m => `
     <div onclick="openEditSingleMemberModal('${m.id}')" class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 cursor-pointer hover:border-indigo-400">
       <div class="flex items-center gap-2 min-w-0">
-        <span class="w-7 h-7 rounded-full flex items-center justify-center text-sm text-white" style="background:${m.color || '#0284c7'};">${m.emoji}</span>
+        <span class="w-7 h-7 rounded-full flex items-center justify-center text-sm text-white flex-shrink-0" style="background:${m.color || '#0284c7'};">${m.emoji}</span>
         <div class="min-w-0">
           <div class="text-xs font-extrabold text-slate-900 truncate">${escapeHtml(m.name)}</div>
-          <div class="text-[11px] font-mono text-slate-500">${m.account ? escapeHtml(m.account) : 'Bez účtu'}</div>
+          <div class="text-[11px] font-mono text-slate-500 truncate">${m.account ? escapeHtml(m.account) : 'Bez účtu'}${m.email ? ` • 🔥 ${escapeHtml(m.email)}` : ''}</div>
         </div>
       </div>
-      <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">Upravit ➔</span>
+      <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg flex-shrink-0">Upravit ➔</span>
     </div>
   `).join('');
 }
@@ -3310,21 +3609,25 @@ function addMemberToActiveGroup() {
   const grp = getActiveGroup();
   const name = document.getElementById('newMemNameInp').value.trim();
   const account = document.getElementById('newMemAccInp').value.trim();
+  const email = (document.getElementById('newMemEmailInp')?.value || '').trim().toLowerCase();
   if (!name) {
     showToast('⚠️ Zadejte jméno člena');
     return;
   }
   const color = AVATAR_BG_COLORS[grp.members.length % AVATAR_BG_COLORS.length];
   grp.members.push({
-    id: 'm-' + Date.now(),
+    id: 'm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
     name,
     emoji: '😎',
     color,
     weight: 1,
-    account
+    account,
+    email
   });
+  grp.isTemplate = false;
   document.getElementById('newMemNameInp').value = '';
   document.getElementById('newMemAccInp').value = '';
+  if (document.getElementById('newMemEmailInp')) document.getElementById('newMemEmailInp').value = '';
   saveState();
   renderEditMembersList();
   renderApp();
@@ -3334,9 +3637,13 @@ function addMemberToActiveGroup() {
 function createNewGroupPrompt() {
   const themes = ['lime', 'teal', 'amber', 'crimson', 'purple'];
   const nextTheme = themes[appState.groups.length % themes.length];
+  const myEmail = (window.KvitFirebase?.currentUser?.email || '').trim().toLowerCase();
+  const myName = (window.KvitFirebase?.currentUser?.displayName || 'Já').split(' ')[0];
+  const myUid = window.KvitFirebase?.currentUser?.uid || '';
+
   const newGrp = {
-    id: 'grp-' + Date.now(),
-    name: `Skupina ${appState.groups.length + 1}`,
+    id: 'grp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+    name: `Dovolená ${appState.groups.length + 1}`,
     destination: 'ČR & Evropa',
     syncCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
     theme: nextTheme,
@@ -3347,9 +3654,12 @@ function createNewGroupPrompt() {
       { code: 'CZK', rate: 1.0 }
     ],
     isTemplate: false,
+    deletedExpenseIds: [],
+    participantUids: myUid ? [myUid] : [],
+    participantEmails: myEmail ? [myEmail] : [],
     members: [
-      { id: 'm-' + Date.now() + '1', name: 'Petr', emoji: '🤠', color: '#0284c7', weight: 1, account: '123456789/0800' },
-      { id: 'm-' + Date.now() + '2', name: 'Jana', emoji: '🦊', color: '#059669', weight: 1, account: '987654321/0100' }
+      { id: 'm-' + Date.now() + '1', name: myName, emoji: '🤠', color: '#0284c7', weight: 1, account: '', email: myEmail },
+      { id: 'm-' + Date.now() + '2', name: 'Spolucestující', emoji: '🦊', color: '#059669', weight: 1, account: '', email: '' }
     ],
     expenses: []
   };
@@ -3358,7 +3668,7 @@ function createNewGroupPrompt() {
   saveState();
   renderApp();
   openEditGroupModal();
-  showToast('✨ Založena nová skupina');
+  showToast('✨ Založena nová sdílená skupina');
 }
 
 function deleteActiveGroupWithButton() {
@@ -3369,15 +3679,24 @@ function deleteActiveGroupWithButton() {
   const activeId = appState.activeGroupId;
   appState.groups = appState.groups.filter(g => g.id !== activeId);
   appState.activeGroupId = appState.groups[0].id;
-  saveState();
+  saveState(true);
   closeModal('editGroupModal');
   renderApp();
-  showToast('🗑️ Skupina smazána');
+  showToast('🗑️ Skupina odebrána ze zařízení');
 }
 
 /* ============================================================================
    11. SYNCHRONIZACE & ZÁLOHY
    ============================================================================ */
+function copyActiveTripShareCode() {
+  const grp = getActiveGroup();
+  if (!grp.syncCode) {
+    grp.syncCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    saveState();
+  }
+  copyToClipboard(grp.syncCode);
+}
+
 function encodeCompactSyncPayload(grp) {
   normalizeGroupCurrencies(grp);
   const pack = {
@@ -3390,7 +3709,7 @@ function encodeCompactSyncPayload(grp) {
     c: grp.currency,
     r: grp.rateToCzk,
     crs: grp.currencies,
-    m: (grp.members || []).map(m => [m.id, m.name, m.emoji, m.color, m.weight || 1, m.account || '']),
+    m: (grp.members || []).map(m => [m.id, m.name, m.emoji, m.color, m.weight || 1, m.account || '', m.email || '']),
     e: (grp.expenses || []).map(x => [
       x.id, x.title, x.category, x.amount, x.currency, x.paidBy, x.splits,
       x.date, x.updatedAt || 0, x.splitMode || 'EQUAL', x.shares || null,
@@ -3417,7 +3736,7 @@ function importCompactSyncPayload(rawString, switchAfter = true) {
     let addedChanges = 0;
 
     const incomingMembers = pack.m.map(arr => ({
-      id: arr[0], name: arr[1], emoji: arr[2], color: arr[3], weight: arr[4], account: arr[5]
+      id: arr[0], name: arr[1], emoji: arr[2], color: arr[3], weight: arr[4], account: arr[5], email: arr[6] || ''
     }));
 
     const incomingExpenses = (pack.e || []).map(arr => ({
@@ -3439,12 +3758,16 @@ function importCompactSyncPayload(rawString, switchAfter = true) {
         rateToCzk: pack.r || 25.0,
         currencies: pack.crs || [{ code: pack.c || 'EUR', rate: pack.r || 25.0 }, { code: 'CZK', rate: 1.0 }],
         isTemplate: false,
+        deletedExpenseIds: [],
+        participantUids: [],
+        participantEmails: [],
         members: incomingMembers,
         expenses: incomingExpenses
       };
       appState.groups.push(targetGrp);
       addedChanges = incomingExpenses.length;
     } else {
+      targetGrp.isTemplate = false;
       if (pack.dst && !targetGrp.destination) targetGrp.destination = pack.dst;
       if (Array.isArray(pack.crs)) targetGrp.currencies = pack.crs;
 
@@ -3453,8 +3776,9 @@ function importCompactSyncPayload(rawString, switchAfter = true) {
         if (!ex) {
           targetGrp.members.push(im);
           addedChanges++;
-        } else if (im.account && !ex.account) {
-          ex.account = im.account;
+        } else {
+          if (im.account && !ex.account) ex.account = im.account;
+          if (im.email && !ex.email) ex.email = im.email;
         }
       });
 
@@ -3480,9 +3804,11 @@ function openSyncModal() {
   const grp = getActiveGroup();
   if (!grp.syncCode) {
     grp.syncCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    saveState();
+    saveState(true);
   }
   document.getElementById('cloudRoomCodeInp').value = grp.syncCode;
+  const fbCodeDisp = document.getElementById('fbActiveTripCodeDisplay');
+  if (fbCodeDisp) fbCodeDisp.textContent = grp.syncCode;
 
   const savedUrl = localStorage.getItem(SERVER_URL_KEY) || DEFAULT_PI_SERVER_URL;
   const urlInp = document.getElementById('piServerUrlInp');
@@ -3736,7 +4062,7 @@ function importAllDataJSON(event) {
 
 function resetToDefaultDemo() {
   appState = getDefaultDemoState();
-  saveState();
+  saveState(true);
   closeModal('drawerModal');
   renderApp();
   showToast('🔄 Vzorová data obnovena');
@@ -3868,9 +4194,82 @@ function printGroupSettlementReport() {
   window.print();
 }
 
+/* ============================================================================
+   14. PWA INSTALACE & SERVICE WORKER
+   ============================================================================ */
+function isRunningStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function updatePwaInstallUI() {
+  const heroBtn = document.getElementById('heroInstallBtn');
+  const drawerBtn = document.getElementById('drawerInstallPwaBtn');
+  const drawerLbl = document.getElementById('drawerInstallPwaLabel');
+  const statusSub = document.getElementById('pwaStatusSubtext');
+
+  if (isRunningStandalone()) {
+    if (heroBtn) heroBtn.classList.add('hidden');
+    if (drawerLbl) drawerLbl.textContent = '✅ Aplikace Kvit je nainstalována';
+    if (drawerBtn) drawerBtn.className = 'w-full py-3 px-4 rounded-xl bg-emerald-600 text-white text-xs font-black flex items-center justify-center gap-2';
+    if (statusSub) statusSub.textContent = 'Spuštěno v režimu samostatné aplikace (Standalone PWA).';
+    return;
+  }
+
+  if (deferredInstallPrompt) {
+    if (heroBtn) heroBtn.classList.remove('hidden');
+    if (drawerLbl) drawerLbl.textContent = '📲 Nainstalovat Kvit na plochu (Připraveno)';
+    if (drawerBtn) drawerBtn.className = 'w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm';
+    if (statusSub) statusSub.textContent = 'Prohlížeč potvrdil instalovatelnost — klikněte pro instalaci jedním klepnutím.';
+  } else {
+    if (heroBtn) heroBtn.classList.add('hidden');
+    const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+    if (statusSub) {
+      statusSub.textContent = isIos
+        ? 'Na iPhone/iPad: klepněte v Safari na Sdílet (⬆️) → Přidat na plochu.'
+        : 'V menu prohlížeče (⋮) zvolte „Nainstalovat aplikaci“ nebo „Přidat na plochu“.';
+    }
+  }
+}
+
+async function triggerPwaInstall() {
+  if (isRunningStandalone()) {
+    showToast('✅ Aplikace Kvit už je nainstalována');
+    return;
+  }
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') {
+      showToast('🎉 Instalace aplikace Kvit spuštěna!');
+      deferredInstallPrompt = null;
+      updatePwaInstallUI();
+    }
+    return;
+  }
+  const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  if (isIos) {
+    showToast('📱 V Safari klepněte na Sdílet → Přidat na plochu');
+  } else {
+    showToast('📲 Otevřete menu prohlížeče (⋮) a zvolte „Nainstalovat aplikaci“');
+  }
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  updatePwaInstallUI();
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  updatePwaInstallUI();
+  showToast('🎉 Kvit byl úspěšně nainstalován jako PWA aplikace!');
+});
+
 function openModal(id) {
   const m = document.getElementById(id);
   if (m) m.classList.add('active');
+  if (id === 'drawerModal') updatePwaInstallUI();
 }
 
 function closeModal(id) {
@@ -3884,7 +4283,7 @@ function showToast(msg) {
   box.textContent = msg;
   box.style.display = 'block';
   clearTimeout(window.__toastTimer);
-  window.__toastTimer = setTimeout(() => { box.style.display = 'none'; }, 2400);
+  window.__toastTimer = setTimeout(() => { box.style.display = 'none'; }, 2800);
 }
 
 function copyToClipboard(text) {
@@ -3916,11 +4315,16 @@ window.addEventListener('DOMContentLoaded', () => {
   loadState();
   initBubbleCanvasEvents();
   renderApp();
+  updatePwaInstallUI();
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service_worker.js').catch(err => {
-      console.warn('Service Worker registrace selhala:', err);
-    });
+    navigator.serviceWorker.register('./service_worker.js', { scope: './' })
+      .then(reg => {
+        reg.update().catch(() => {});
+      })
+      .catch(err => {
+        console.warn('Service Worker registrace selhala:', err);
+      });
   }
 });
 </script>
