@@ -1,0 +1,3928 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#6c42c4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Kvit v1.2 — Vyrovnávač společných útrat</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236c42c4'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='64'>🤝</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --hero-bg: #6c42c4;
+      --hero-bg-dark: #532da3;
+      --fab-green: #5cb85c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .app-container {
+      max-width: 520px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 45px rgba(15, 23, 42, 0.14);
+      position: relative;
+      padding-bottom: 78px;
+    }
+
+    /* SETTLE UP COLORED HERO SECTION */
+    .hero-section {
+      background: linear-gradient(180deg, var(--hero-bg) 0%, var(--hero-bg-dark) 100%);
+      color: #ffffff;
+      position: relative;
+      transition: background 0.35s ease;
+      overflow: hidden;
+    }
+
+    .hero-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px 4px;
+      gap: 6px;
+      position: relative;
+      z-index: 20;
+    }
+
+    .hero-btn {
+      min-height: 36px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(6px);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .hero-btn:active {
+      transform: scale(0.94);
+      background: rgba(255, 255, 255, 0.28);
+    }
+
+    .destination-banner {
+      padding: 2px 16px 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      z-index: 20;
+      position: relative;
+    }
+
+    .bubble-stage-wrap {
+      position: relative;
+      width: 100%;
+      height: 285px;
+      touch-action: none;
+    }
+
+    #bubbleCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #bubbleCanvas:active {
+      cursor: grabbing;
+    }
+
+    .drag-hint-pill {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.38);
+      backdrop-filter: blur(6px);
+      color: rgba(255, 255, 255, 0.94);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 999px;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 15;
+    }
+
+    /* GROUP TABS BAR */
+    .group-tabs-bar {
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0 10px;
+      background: rgba(0, 0, 0, 0.12);
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .group-tabs-bar::-webkit-scrollbar { display: none; }
+
+    .group-tab {
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      color: rgba(255, 255, 255, 0.68);
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1px;
+    }
+
+    .group-tab.active {
+      color: #ffffff;
+      border-bottom-color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .group-tab-add {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      margin-left: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 900;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* TRANSACTIONS FEED */
+    .transactions-header {
+      padding: 12px 16px 8px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .tx-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      background: #ffffff;
+      transition: background 0.12s ease;
+      cursor: pointer;
+    }
+
+    .tx-row:hover {
+      background: #f8fafc;
+    }
+
+    .tx-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: #ffffff;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      position: relative;
+    }
+
+    .mini-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #ffffff;
+      border: 1.5px solid #ffffff;
+      margin-left: -5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .mini-avatar:first-child {
+      margin-left: 0;
+    }
+
+    /* BOTTOM ACTION BAR + FAB */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 520px;
+      height: 64px;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 40;
+    }
+
+    .fab-add-btn {
+      position: absolute;
+      left: 50%;
+      top: -22px;
+      transform: translateX(-50%);
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6cc644 0%, #4cae4c 100%);
+      color: #ffffff;
+      font-size: 32px;
+      font-weight: 400;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(76, 174, 76, 0.48);
+      border: 3px solid #ffffff;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .fab-add-btn:active {
+      transform: translateX(-50%) scale(0.92);
+    }
+
+    /* MODALS */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    /* Úprava jednotlivého člena vždy nahoře nad nastavením skupiny */
+    #editMemberModal {
+      z-index: 160 !important;
+    }
+
+    .modal-sheet {
+      width: 100%;
+      max-width: 520px;
+      max-height: 92vh;
+      overflow-y: auto;
+      background: #ffffff;
+      border-radius: 24px 24px 0 0;
+      padding: 20px 18px 32px;
+      animation: slideUp 0.22s ease-out;
+      color: #0f172a;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .toast-pill {
+      position: fixed;
+      top: 66px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 250;
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      display: none;
+      white-space: nowrap;
+    }
+
+    input, select, textarea {
+      user-select: auto;
+    }
+
+    /* ==========================================================================
+       TISKOVÝ STYL PRO PDF EXPORT (@media print)
+       ========================================================================== */
+    #printReportArea {
+      display: none;
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-family: Arial, sans-serif !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .app-container, .modal-backdrop, .toast-pill {
+        display: none !important;
+      }
+      #printReportArea {
+        display: block !important;
+        padding: 20px 24px;
+        color: #000000;
+        background: #ffffff;
+      }
+      .pdf-title-block {
+        border-bottom: 2.5px solid #000000;
+        padding-bottom: 8px;
+        margin-bottom: 14px;
+      }
+      .pdf-h1 {
+        font-size: 20pt;
+        font-weight: 900;
+        margin: 0 0 4px 0;
+      }
+      .pdf-meta {
+        font-size: 10pt;
+        color: #333333;
+      }
+      .pdf-h2 {
+        font-size: 13pt;
+        font-weight: 800;
+        margin: 18px 0 8px 0;
+        border-bottom: 1px solid #777777;
+        padding-bottom: 3px;
+      }
+      .pdf-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 14px;
+        font-size: 9pt;
+      }
+      .pdf-table th, .pdf-table td {
+        border: 1px solid #bbbbbb;
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      .pdf-table tr {
+        page-break-inside: avoid;
+      }
+      .pdf-table th {
+        background-color: #f1f5f9;
+        font-weight: bold;
+      }
+      .pdf-settle-card {
+        border: 1px solid #000000;
+        background: #f8fafc;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        font-size: 10pt;
+        page-break-inside: avoid;
+      }
+      .pdf-footer {
+        margin-top: 24px;
+        font-size: 8.5pt;
+        color: #666666;
+        text-align: center;
+        border-top: 1px solid #cccccc;
+        padding-top: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastBox" class="toast-pill">Uloženo</div>
+
+  <!-- 1. HERO HEADER WITH BUBBLES -->
+  <header class="hero-section" id="heroSection">
+    <div class="hero-topbar">
+      <div class="flex items-center gap-1.5">
+        <button class="hero-btn" onclick="openModal('drawerModal')" title="Menu Kvit, PDF export, Paměť a Záloha">
+          <span class="text-base">☰</span>
+          <span class="text-xs font-black tracking-wider uppercase">Kvit</span>
+          <span class="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full">v1.2</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button class="hero-btn" onclick="openSyncModal()" title="Synchronizace přes Firebase, Raspberry Pi nebo Offline QR">
+          <span>🔄</span>
+          <span>Sync</span>
+          <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-slate-400" title="Stav synchronizace"></span>
+        </button>
+        <button class="hero-btn" onclick="openEditGroupModal()" title="Upravit členy, měny a skupinu">
+          <span>Upravit</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Poznámka destinace a přehled aktivních měn -->
+    <div class="destination-banner">
+      <div id="heroDestinationLabel" class="truncate">📍 Destinace: —</div>
+      <div id="heroCurrenciesBadge" class="text-[11px] bg-black/25 px-2.5 py-0.5 rounded-full whitespace-nowrap font-mono">EUR • CZK</div>
+    </div>
+
+    <!-- Interactive Bubble Canvas -->
+    <div class="bubble-stage-wrap" id="bubbleStageWrap">
+      <canvas id="bubbleCanvas"></canvas>
+      <div class="drag-hint-pill" id="bubbleDragHint">
+        💡 Klepni na bublinu pro přehled osoby • Přetáhni na druhou pro vyrovnání
+      </div>
+    </div>
+
+    <!-- Group Tabs -->
+    <nav class="group-tabs-bar" id="groupTabsBar"></nav>
+  </header>
+
+  <!-- 2. TRANSACTIONS FEED HEADER -->
+  <section class="transactions-header">
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500">Transakce</span>
+      <span id="txCountBadge" class="text-xs font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">0</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="groupTotalPill" class="text-xs font-bold text-slate-600">Celkem: 0 EUR</span>
+      <button onclick="toggleSearchBox()" class="text-xs font-bold text-indigo-600 hover:underline px-2 py-1">
+        🔍 Filtr
+      </button>
+    </div>
+  </section>
+
+  <!-- Search & Filters -->
+  <div id="searchFilterBar" class="hidden bg-slate-50 px-4 py-2.5 border-b border-slate-200">
+    <div class="flex gap-2 mb-2">
+      <input type="text" id="txSearchInput" oninput="renderTransactionsFeed()" placeholder="Hledat podle názvu nebo plátce..." class="w-full text-sm px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500">
+      <button onclick="clearSearchFilter()" class="px-3 py-2 text-xs font-bold bg-slate-200 rounded-xl text-slate-700">Zrušit</button>
+    </div>
+    <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs font-bold">
+      <button onclick="setTxCategoryFilter('ALL')" class="tx-cat-btn px-2.5 py-1 rounded-lg bg-indigo-600 text-white whitespace-nowrap" data-cat="ALL">Vše</button>
+      <button onclick="setTxCategoryFilter('Jídlo & Pití')" class="tx-cat-btn px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 whitespace-nowrap" data-cat="Jídlo & Pití">🍽️ Jídlo</button>
+      <button onclick="setTxCategoryFilter('Kemp & Ubytování')" class="tx-cat-btn px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 whitespace-nowrap" data-cat="Kemp & Ubytování">⛺ Ubytování</button>
+      <button onclick="setTxCategoryFilter('Doprava & Benzín')" class="tx-cat-btn px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 whitespace-nowrap" data-cat="Doprava & Benzín">⛽ Doprava</button>
+      <button onclick="setTxCategoryFilter('Muzea & Vstupy')" class="tx-cat-btn px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 whitespace-nowrap" data-cat="Muzea & Vstupy">🎟️ Vstupy</button>
+      <button onclick="setTxCategoryFilter('Záloha')" class="tx-cat-btn px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 whitespace-nowrap" data-cat="Záloha">🏦 Záloha</button>
+      <button onclick="setTxCategoryFilter('Vyrovnání')" class="tx-cat-btn px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 whitespace-nowrap" data-cat="Vyrovnání">🤝 Vyrovnání</button>
+    </div>
+  </div>
+
+  <!-- Feed -->
+  <main id="transactionsContainer" class="flex-1 divide-y divide-slate-100"></main>
+
+  <!-- Bottom Settle Preview -->
+  <section class="p-4 bg-slate-50 border-t border-slate-200">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500">Vyrovnání dluhů (Kdo komu dluží)</span>
+      <button onclick="openSettleAllModal()" class="text-xs font-bold text-indigo-600 hover:underline">Detail & QR Platby →</button>
+    </div>
+    <div id="bottomSettlePreview"></div>
+  </section>
+
+  <!-- 3. BOTTOM BAR + GREEN FAB -->
+  <nav class="bottom-bar">
+    <button onclick="openSettleAllModal()" class="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-slate-700 hover:text-indigo-600 py-2 px-2.5 rounded-xl">
+      <span>🤝</span>
+      <span>Vyrovnat</span>
+    </button>
+
+    <button class="fab-add-btn" onclick="openExpenseModal(null)" title="Přidat novou útratu">
+      +
+    </button>
+
+    <div class="flex items-center">
+      <button onclick="cycleSortMode()" id="sortBtnBottom" class="flex items-center gap-1.5 text-xs font-extrabold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 py-2 px-3 rounded-xl border border-indigo-200 transition" title="Přepnout řazení položek">
+        <span>🔃</span>
+        <span id="sortBtnLabel">Dle data ↓</span>
+      </button>
+    </div>
+  </nav>
+</div>
+
+<!-- ==========================================================================
+     MODÁL: OSOBNÍ PŘEHLED ČLENA PO KLIKNUTÍ NA BUBLINU
+     ========================================================================== -->
+<div id="memberOverviewModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('memberOverviewModal')">
+  <div class="modal-sheet">
+    <!-- Hlavička člena -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <div id="ovMemberAvatar" class="w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-md flex-shrink-0">🤠</div>
+        <div class="min-w-0">
+          <h3 id="ovMemberName" class="text-lg font-black truncate">--</h3>
+          <div id="ovMemberAccount" class="text-xs font-mono text-slate-500 truncate">Účet nezadán</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        <button id="ovBtnEditMember" class="text-xs font-extrabold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-2 rounded-xl">
+          ✏️ Upravit
+        </button>
+        <button onclick="closeModal('memberOverviewModal')" class="text-xs font-bold bg-slate-100 px-3 py-2 rounded-xl">
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- 4 přehledné karty: Zaplatil za výlet | Náklady na výlet | Vyrovnání & Zálohy | Výsledná bilance -->
+    <div class="grid grid-cols-2 gap-2 mb-4">
+      <div class="bg-slate-50 border border-slate-200 p-2.5 rounded-2xl">
+        <div class="text-[10px] font-extrabold uppercase text-slate-400">💳 Zaplatil(a) za výlet</div>
+        <div id="ovTotalPaid" class="text-sm font-black text-slate-800 mt-0.5">0</div>
+        <div id="ovTotalPaidCzk" class="text-[11px] font-semibold text-slate-500">0 Kč</div>
+      </div>
+      <div class="bg-indigo-50/60 border border-indigo-200 p-2.5 rounded-2xl">
+        <div class="text-[10px] font-extrabold uppercase text-indigo-600">🎒 Náklady na výlet osoby</div>
+        <div id="ovTotalShare" class="text-sm font-black text-indigo-950 mt-0.5">0</div>
+        <div id="ovTotalShareCzk" class="text-[11px] font-semibold text-indigo-700">0 Kč</div>
+      </div>
+      <div class="bg-amber-50/70 border border-amber-200 p-2.5 rounded-2xl">
+        <div class="text-[10px] font-extrabold uppercase text-amber-700">🤝 Vyrovnání & Zálohy</div>
+        <div id="ovTotalSettlements" class="text-xs font-black text-amber-900 mt-0.5">Poslal: 0 | Přijal: 0</div>
+        <div id="ovTotalSettlementsCzk" class="text-[10px] font-semibold text-amber-700">Mimo spotřebu výletu</div>
+      </div>
+      <div id="ovNetBox" class="bg-slate-50 border border-slate-200 p-2.5 rounded-2xl">
+        <div class="text-[10px] font-extrabold uppercase text-slate-400">⚖️ Celková bilance</div>
+        <div id="ovTotalNet" class="text-sm font-black mt-0.5">0</div>
+        <div id="ovTotalNetCzk" class="text-[11px] font-semibold">0 Kč</div>
+      </div>
+    </div>
+
+    <!-- Rychlé akce pro daného člověka -->
+    <div class="flex gap-2 mb-4">
+      <button id="ovBtnAddExpenseByMember" class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm">
+        ➕ Přidat platbu od této osoby
+      </button>
+    </div>
+
+    <!-- Přepínač záložek -->
+    <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl mb-3">
+      <button id="ovTabBtnPaid" onclick="switchMemberOverviewTab('PAID')" class="py-2 text-[11px] font-extrabold rounded-lg bg-indigo-600 text-white">
+        💳 Platil (<span id="ovPaidCount">0</span>)
+      </button>
+      <button id="ovTabBtnConsumed" onclick="switchMemberOverviewTab('CONSUMED')" class="py-2 text-[11px] font-extrabold rounded-lg text-slate-600">
+        🎒 Náklady (<span id="ovConsumedCount">0</span>)
+      </button>
+      <button id="ovTabBtnSettle" onclick="switchMemberOverviewTab('SETTLE')" class="py-2 text-[11px] font-extrabold rounded-lg text-slate-600">
+        🤝 Vyrovnání (<span id="ovSettleCount">0</span>)
+      </button>
+    </div>
+
+    <div id="ovListPaidContainer" class="space-y-2 max-h-60 overflow-y-auto pr-0.5"></div>
+    <div id="ovListConsumedContainer" class="hidden space-y-2 max-h-60 overflow-y-auto pr-0.5"></div>
+    <div id="ovListSettleContainer" class="hidden space-y-2 max-h-60 overflow-y-auto pr-0.5"></div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MODÁL: ÚPRAVA NEBO PŘIDÁNÍ ÚTRATY
+     ========================================================================== -->
+<div id="expenseModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('expenseModal')">
+  <div class="modal-sheet">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-lg font-black" id="expenseModalTitle">➕ Nová útrata</h3>
+      <button onclick="closeModal('expenseModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Zavřít</button>
+    </div>
+
+    <input type="hidden" id="editingExpenseId" value="">
+
+    <div class="mb-3">
+      <label class="block text-xs font-bold text-slate-500 mb-1">Za co se platilo?</label>
+      <input type="text" id="expTitleInp" placeholder="Např. Večeře, Benzín, Záloha na ubytování..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-semibold text-sm">
+    </div>
+
+    <div class="grid grid-cols-12 gap-2 mb-3">
+      <div class="col-span-4">
+        <label class="block text-xs font-bold text-slate-500 mb-1">Částka</label>
+        <input type="number" step="0.01" id="expAmountInp" placeholder="0.00" oninput="refreshExpenseSplitPreview()" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-black text-base">
+      </div>
+      <div class="col-span-3">
+        <label class="block text-xs font-bold text-slate-500 mb-1">Měna</label>
+        <select id="expCurrencyInp" onchange="onExpenseCurrencyChange()" class="w-full px-2 py-2.5 rounded-xl border border-slate-300 font-bold text-sm bg-white"></select>
+      </div>
+      <div class="col-span-5">
+        <label class="block text-xs font-bold text-slate-500 mb-1">Kategorie / Typ</label>
+        <select id="expCategoryInp" onchange="onCategorySelectChange()" class="w-full px-2 py-2.5 rounded-xl border border-slate-300 font-bold text-xs bg-white">
+          <option value="Jídlo & Pití">🍺 Jídlo & Pití</option>
+          <option value="Kemp & Ubytování">⛺ Ubytování</option>
+          <option value="Muzea & Vstupy">🎟️ Muzea & Vstupy</option>
+          <option value="Doprava & Benzín">⛽ Doprava & Benzín</option>
+          <option value="Nákupy">🛒 Nákupy</option>
+          <option value="Záloha">🏦 Platba Záloha</option>
+          <option value="Vyrovnání">🤝 Vyrovnání dluhu</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-2.5 mb-3 bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+      <div class="col-span-6">
+        <label class="block text-[11px] font-bold text-slate-500 mb-1">Způsob platby</label>
+        <div class="grid grid-cols-2 gap-1 bg-slate-200/80 p-1 rounded-xl">
+          <button type="button" id="payMethodBtn_CASH" onclick="setPaymentMethod('CASH')" class="py-1.5 text-xs font-extrabold rounded-lg bg-white text-slate-900 shadow-sm">💵 Hotově</button>
+          <button type="button" id="payMethodBtn_CARD" onclick="setPaymentMethod('CARD')" class="py-1.5 text-xs font-extrabold rounded-lg text-slate-600">💳 Kartou</button>
+        </div>
+      </div>
+      <div class="col-span-6" id="expCustomRateBox">
+        <label class="block text-[11px] font-bold text-slate-500 mb-1">Kurz k CZK (banka plátce)</label>
+        <div class="flex items-center gap-1">
+          <input type="number" step="0.001" id="expCustomRateInp" oninput="updateExpenseCzkEqPreview()" class="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 font-bold text-sm bg-white" placeholder="25.0">
+          <span id="expCzkEqLabel" class="text-[10px] font-bold text-slate-500 whitespace-nowrap">≈ 0 Kč</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2.5 mb-3">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">Kdo to zaplatil?</label>
+        <select id="expPaidByInp" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-bold text-sm bg-white"></select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">Datum a čas</label>
+        <input type="text" id="expDateInp" placeholder="13. 11. 12:00" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-bold text-sm bg-white">
+      </div>
+    </div>
+
+    <label class="block text-xs font-bold text-slate-500 mb-1">Jak rozpočítat mezi účastníky?</label>
+    <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl mb-3">
+      <button type="button" id="splitBtn_EQUAL" onclick="setSplitMode('EQUAL')" class="py-2 text-xs font-extrabold rounded-lg bg-indigo-600 text-white">⚖️ Rovným dílem</button>
+      <button type="button" id="splitBtn_SHARES" onclick="setSplitMode('SHARES')" class="py-2 text-xs font-extrabold rounded-lg text-slate-600">👨‍👩‍👧 Podíly</button>
+      <button type="button" id="splitBtn_EXACT" onclick="setSplitMode('EXACT')" class="py-2 text-xs font-extrabold rounded-lg text-slate-600">🔢 Přesné částky</button>
+    </div>
+
+    <div id="expSplitParticipantsBox" class="bg-slate-50 p-3 rounded-2xl border border-slate-200 mb-4"></div>
+
+    <div class="flex gap-2">
+      <button onclick="saveExpenseFromModal()" class="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md">
+        💾 Uložit útratu
+      </button>
+      <button id="btnDeleteExpenseInModal" onclick="deleteCurrentExpenseWithButton()" class="hidden px-4 py-3.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-sm">
+        🗑️ Smazat
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MODÁL: NASTAVENÍ SKUPINY, DESTINACE, VÍCE MĚN & ČLENŮ
+     ========================================================================== -->
+<div id="editGroupModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('editGroupModal')">
+  <div class="modal-sheet">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-lg font-black">⚙️ Nastavení skupiny & Měn</h3>
+      <button onclick="closeModal('editGroupModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Hotovo</button>
+    </div>
+
+    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 mb-4">
+      <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 mb-1">Název skupiny</label>
+          <input type="text" id="grpEditNameInp" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-bold bg-white" placeholder="Např. Balkán Trip">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 mb-1">Barevný motiv</label>
+          <select id="grpEditThemeInp" onchange="previewThemeColor(this.value)" class="w-full px-2.5 py-2 rounded-xl border border-slate-300 text-sm font-bold bg-white">
+            <option value="purple">🟣 Fialová</option>
+            <option value="lime">🟢 Limetková</option>
+            <option value="teal">🔵 Tyrkysová</option>
+            <option value="amber">🟠 Jantarová</option>
+            <option value="crimson">🔴 Červená</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="block text-[11px] font-bold text-slate-500 mb-1">📍 Poznámka destinace (země / trasa)</label>
+        <input type="text" id="grpEditDestInp" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white" placeholder="Např. Polsko, Litva, Lotyšsko nebo Itálie - Sicílie">
+      </div>
+
+      <div class="border-t border-slate-200 pt-2.5 mt-2">
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-[11px] font-extrabold text-slate-700">💱 Měny výletu a výchozí kurzy k CZK</label>
+          <span class="text-[10px] text-slate-500">Hlavní měna je první</span>
+        </div>
+
+        <div id="grpCurrenciesListBox" class="space-y-1.5 mb-2"></div>
+
+        <div class="grid grid-cols-12 gap-1.5 items-center bg-white p-2 rounded-xl border border-slate-200 mb-3">
+          <input type="text" id="newCurrCodeInp" maxlength="5" placeholder="Kód (PLN, HUF, USD)" class="col-span-5 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold uppercase">
+          <input type="number" step="0.001" id="newCurrRateInp" placeholder="Kurz k CZK (např. 5.85)" class="col-span-4 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold">
+          <button type="button" onclick="addCurrencyToGroup()" class="col-span-3 py-1.5 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-black">+ Měna</button>
+        </div>
+      </div>
+
+      <button onclick="saveGroupHeaderSettings()" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm">
+        💾 Uložit nastavení skupiny a měn
+      </button>
+    </div>
+
+    <div class="mb-3">
+      <div class="text-xs font-extrabold text-slate-700 mb-2">👥 Členové skupiny (klepnutím se otevře úprava navrchu)</div>
+      <div class="grid grid-cols-12 gap-1.5 mb-2">
+        <input type="text" id="newMemNameInp" placeholder="Jméno (např. Karel)" class="col-span-5 px-2.5 py-2 rounded-xl border border-slate-300 text-xs font-bold">
+        <input type="text" id="newMemAccInp" placeholder="Účet (123456/0800)" class="col-span-5 px-2.5 py-2 rounded-xl border border-slate-300 text-xs font-mono">
+        <button onclick="addMemberToActiveGroup()" class="col-span-2 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black">+ Člen</button>
+      </div>
+      <div id="editMembersListBox" class="space-y-2 max-h-48 overflow-y-auto"></div>
+    </div>
+
+    <div class="flex justify-between items-center pt-3 border-t border-slate-200">
+      <button onclick="createNewGroupPrompt()" class="py-2 px-3 rounded-xl bg-slate-900 text-white text-xs font-bold">
+        ✨ + Nová skupina
+      </button>
+      <button onclick="deleteActiveGroupWithButton()" class="py-2 px-3 rounded-xl bg-rose-100 text-rose-700 text-xs font-bold">
+        🗑️ Smazat skupinu
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MODÁL: ÚPRAVA JEDNOTLIVÉHO ČLENA
+     ========================================================================== -->
+<div id="editMemberModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('editMemberModal')">
+  <div class="modal-sheet shadow-2xl border-t-4 border-indigo-600">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-lg font-black">👤 Úprava člena skupiny</h3>
+      <button onclick="closeModal('editMemberModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Zavřít</button>
+    </div>
+
+    <input type="hidden" id="editMemberIdInp" value="">
+
+    <div class="mb-3">
+      <label class="block text-xs font-bold text-slate-500 mb-1">Jméno člena</label>
+      <input type="text" id="editMemberNameInp" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-sm">
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">Emoji avatar</label>
+        <select id="editMemberEmojiInp" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-base bg-white">
+          <option value="🤠">🤠 Kovboj</option>
+          <option value="🦊">🦊 Liška</option>
+          <option value="😎">😎 Brýle</option>
+          <option value="🐼">🐼 Panda</option>
+          <option value="🦁">🦁 Lev</option>
+          <option value="🚀">🚀 Raketa</option>
+          <option value="🦉">🦉 Sova</option>
+          <option value="🐱">🐱 Kočka</option>
+          <option value="🐶">🐶 Pes</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">Barva bubliny</label>
+        <select id="editMemberColorInp" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white">
+          <option value="#0284c7">Modrá</option>
+          <option value="#059669">Zelená</option>
+          <option value="#d97706">Jantarová</option>
+          <option value="#7c3aed">Fialová</option>
+          <option value="#db2777">Růžová</option>
+          <option value="#dc2626">Červená</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-xs font-bold text-slate-500 mb-1">Číslo bankovního účtu v ČR (pro QR Platbu)</label>
+      <input type="text" id="editMemberAccountInp" placeholder="123456789/0800" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-sm">
+      <span class="text-[11px] text-slate-400 mt-1 block">Automaticky se převede na platný IBAN pro okamžité QR platby.</span>
+    </div>
+
+    <div class="flex gap-2">
+      <button onclick="saveMemberEdits()" class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm">
+        💾 Uložit úpravy člena
+      </button>
+      <button onclick="deleteMemberWithButton()" class="px-4 py-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-sm">
+        🗑️ Smazat člena
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MODÁL: DRAG & DROP RYCHLÉ VYROVNÁNÍ A QR PLATBA
+     ========================================================================== -->
+<div id="dragSettleModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('dragSettleModal')">
+  <div class="modal-sheet">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">⚡</span>
+        <h3 class="text-lg font-black">Rychlé vyrovnání / Záloha</h3>
+      </div>
+      <button onclick="closeModal('dragSettleModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Zavřít</button>
+    </div>
+
+    <div class="bg-slate-900 text-white p-4 rounded-2xl mb-4 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div id="dragFromAvatar" class="w-11 h-11 rounded-full flex items-center justify-center text-xl font-bold bg-rose-500">👤</div>
+        <div>
+          <div class="text-[11px] text-slate-400 uppercase font-bold">Platí (Posílá)</div>
+          <div id="dragFromName" class="text-base font-black">--</div>
+        </div>
+      </div>
+
+      <div class="text-2xl font-black text-emerald-400">➔</div>
+
+      <div class="flex items-center gap-2.5 text-right">
+        <div>
+          <div class="text-[11px] text-slate-400 uppercase font-bold">Přijímá</div>
+          <div id="dragToName" class="text-base font-black">--</div>
+        </div>
+        <div id="dragToAvatar" class="w-11 h-11 rounded-full flex items-center justify-center text-xl font-bold bg-emerald-500">👤</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1">Částka (<span id="dragCurrLbl">EUR</span>)</label>
+        <input type="number" step="0.01" id="dragSettleAmountInp" oninput="updateDragSettleQr()" class="w-full px-3 py-2.5 text-lg font-black border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-600">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1">V přepočtu na CZK</label>
+        <input type="text" id="dragSettleCzkPreview" readonly class="w-full px-3 py-2.5 text-lg font-black bg-slate-100 text-slate-700 border border-slate-200 rounded-xl">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 mb-4">
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 mb-1">Typ převodu</label>
+        <select id="dragSettleTypeInp" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+          <option value="Vyrovnání">🤝 Vyrovnání dluhu</option>
+          <option value="Záloha">🏦 Platba Záloha</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold text-slate-500 mb-1">Forma úhrady</label>
+        <select id="dragSettleMethodInp" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+          <option value="CARD">💳 Převodem / Kartou</option>
+          <option value="CASH">💵 Hotově</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 mb-4 flex flex-col items-center text-center">
+      <div class="flex items-center justify-between w-full mb-2">
+        <span class="text-xs font-extrabold text-slate-700">🇨🇿 Česká QR Platba (SPD 1.0)</span>
+        <span id="dragToAccountBadge" class="text-[11px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Účet</span>
+      </div>
+      <div class="bg-white p-3 rounded-xl border-2 border-slate-900 shadow-sm my-1">
+        <canvas id="dragQrCanvas"></canvas>
+      </div>
+      <div id="dragIbanSubtext" class="text-[11px] font-mono text-slate-500 mt-1">IBAN: --</div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2.5">
+      <button onclick="swapDragDirection()" class="py-3 px-4 rounded-xl font-bold text-sm bg-slate-100 text-slate-800 hover:bg-slate-200">
+        ⇄ Otočit směr
+      </button>
+      <button onclick="confirmDragSettlePayment()" class="py-3 px-4 rounded-xl font-black text-sm bg-emerald-600 text-white hover:bg-emerald-700 shadow-md">
+        ✅ Zapsat platbu
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MODÁL: SYNCHRONIZACE (FIREBASE CLOUD + OFFLINE QR + RASPBERRY PI)
+     ========================================================================== -->
+<div id="syncModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('syncModal')">
+  <div class="modal-sheet">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h3 class="text-lg font-black">🔄 Synchronizace dat</h3>
+        <p class="text-xs text-slate-500">Firebase Cloud účet, Offline QR nebo vlastní Pi Server</p>
+      </div>
+      <button onclick="closeModal('syncModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Zavřít</button>
+    </div>
+
+    <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl mb-4">
+      <button id="syncTabBtnFirebase" onclick="switchSyncTab('FIREBASE')" class="py-2.5 text-xs font-extrabold rounded-lg bg-indigo-600 text-white">
+        🔥 Firebase
+      </button>
+      <button id="syncTabBtnOffline" onclick="switchSyncTab('OFFLINE')" class="py-2.5 text-xs font-extrabold rounded-lg text-slate-700">
+        📲 Offline QR
+      </button>
+      <button id="syncTabBtnOnline" onclick="switchSyncTab('ONLINE')" class="py-2.5 text-xs font-extrabold rounded-lg text-slate-700">
+        🍓 Pi Server
+      </button>
+    </div>
+
+    <!-- FIREBASE CLOUD SYNC -->
+    <div id="syncFirebasePanel">
+      <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-extrabold text-indigo-950">🔥 Firebase Cloud účet</span>
+          <span id="fbSyncStatusBadge" class="text-[11px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">Odhlášeno</span>
+        </div>
+
+        <div id="fbUserInfoBox" class="hidden flex items-center gap-3 bg-white p-2.5 rounded-xl border border-indigo-200 mb-3">
+          <img id="fbModalAvatar" src="" alt="User" class="w-10 h-10 rounded-full object-cover border border-slate-200">
+          <div class="min-w-0 flex-1">
+            <div id="fbModalName" class="text-xs font-black text-slate-900 truncate">--</div>
+            <div id="fbModalEmail" class="text-[11px] text-slate-500 truncate">--</div>
+          </div>
+        </div>
+
+        <button id="fbModalAuthBtn" onclick="window.KvitFirebase?.handleAuthAction()" class="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm mb-3">
+          👤 Přihlásit se přes Google
+        </button>
+
+        <div id="fbManualSyncControls" class="hidden grid grid-cols-2 gap-2">
+          <button onclick="window.KvitFirebase?.saveToCloud(true)" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">
+            ⬆️ Odeslat do Cloudu
+          </button>
+          <button onclick="window.KvitFirebase?.loadFromCloud(true)" class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black">
+            ⬇️ Stáhnout z Cloudu
+          </button>
+        </div>
+
+        <div id="fbLastSyncText" class="text-[10px] text-indigo-800/75 font-mono text-center mt-2">
+          Po přihlášení se všechny skupiny a útraty ukládají automaticky.
+        </div>
+      </div>
+
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-[11px] text-slate-600">
+        💡 Data se ukládají do vašeho soukromého účtu v projektu <strong>h5page-app</strong> pod samostatným klíčem <code>kvitState</code>, takže nepřepíšou záložky z H5Page.
+      </div>
+    </div>
+
+    <!-- OFFLINE QR -->
+    <div id="syncOfflinePanel" class="hidden">
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-center mb-3">
+        <div class="text-xs font-bold text-slate-700 mb-1">
+          1. Ukaž tento kód kamarádovi (funguje offline bez sítě)
+        </div>
+        <div class="bg-white p-3 rounded-2xl border-2 border-slate-900 inline-block shadow-sm">
+          <canvas id="offlineSyncQrCanvas"></canvas>
+        </div>
+        <div class="text-[10px] text-slate-400 mt-1 mb-2">(Pro přenos použijte tlačítko kopírovat níže)</div>
+        <div class="flex justify-center gap-2">
+          <button onclick="copyOfflineSyncString()" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-800 text-xs font-bold">
+            📋 Kopírovat textový offline kód
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5">
+        <div class="text-xs font-extrabold text-indigo-950 mb-2">
+          2. Přijmout a sloučit data od kamaráda
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="manualSyncCodeInp" placeholder="Vložte zkopírovaný kód sem..." class="flex-1 px-3 py-2 text-xs rounded-xl border border-indigo-300 bg-white font-mono">
+          <button onclick="applyManualSyncInput()" class="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black">Sloučit</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONLINE NET (RASPBERRY PI SELF-HOSTED SERVER) -->
+    <div id="syncOnlinePanel" class="hidden">
+      <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-3">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-extrabold text-emerald-950">🍓 Vlastní Raspberry Pi server</span>
+          <span id="onlineRoomStatusBadge" class="text-[11px] font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full">Připraveno</span>
+        </div>
+        <p class="text-[11px] text-emerald-800 mb-2">
+          Synchronizace přímo přes tvůj domácí Pi Zero skript <code>sync.php</code>.
+        </p>
+
+        <div class="mb-2">
+          <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Adresa tvého serveru (URL):</label>
+          <input type="text" id="piServerUrlInp" class="w-full px-3 py-2 rounded-xl border border-emerald-300 text-xs font-mono bg-white" placeholder="http://raspberrypi.local/sync.php" onchange="savePiServerUrl(this.value)">
+        </div>
+
+        <div class="flex items-center gap-2 mb-3">
+          <div class="flex-1">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Kód místnosti / skupiny:</label>
+            <input type="text" id="cloudRoomCodeInp" maxlength="12" class="w-full px-3 py-2 rounded-xl border border-emerald-400 font-mono text-sm font-black uppercase text-center bg-white" placeholder="ROAD01">
+          </div>
+          <div class="flex flex-col justify-end pt-3">
+            <button onclick="copyCloudRoomCode()" class="px-3 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-900 text-xs font-bold">📋 Kód</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <button onclick="pushGroupToPiServer()" class="py-3 px-3 rounded-xl bg-emerald-600 text-white text-xs font-black shadow-sm flex items-center justify-center gap-1.5 hover:bg-emerald-700">
+            <span>⬆️</span>
+            <span>Odeslat na Pi</span>
+          </button>
+          <button onclick="pullGroupFromPiServer()" class="py-3 px-3 rounded-xl bg-indigo-600 text-white text-xs font-black shadow-sm flex items-center justify-center gap-1.5 hover:bg-indigo-700">
+            <span>⬇️</span>
+            <span>Stáhnout z Pi</span>
+          </button>
+        </div>
+        <div id="piServerStatusSubtext" class="text-[10px] text-slate-500 font-mono text-center truncate">Data jsou uložena u tebe doma</div>
+      </div>
+
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
+        <button onclick="copyShareableUrlLink()" class="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold">
+          🔗 Zkopírovat URL odkaz pro WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MODÁL: VYROVNAT VŠECHNY DLUHY
+     ========================================================================== -->
+<div id="settleAllModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('settleAllModal')">
+  <div class="modal-sheet">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h3 class="text-lg font-black">🤝 Vyrovnání všech dluhů</h3>
+        <p class="text-xs text-slate-500">Minimální počet plateb + QR Platba</p>
+      </div>
+      <button onclick="closeModal('settleAllModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Zavřít</button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <button onclick="copyWhatsAppSummary()" class="py-2.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-extrabold">
+        📲 WhatsApp / SMS
+      </button>
+      <button onclick="printGroupSettlementReport()" class="py-2.5 rounded-xl bg-slate-900 text-white text-xs font-extrabold">
+        📄 Export PDF
+      </button>
+    </div>
+
+    <div id="settleAllListContainer" class="space-y-3"></div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MODÁL: HAMBURGER MENU KVIT
+     ========================================================================== -->
+<div id="drawerModal" class="modal-backdrop" onclick="if(event.target===this)closeModal('drawerModal')">
+  <div class="modal-sheet">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🤝</span>
+        <div>
+          <h3 class="text-base font-black">Kvit</h3>
+          <span class="text-[11px] font-extrabold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">verze 1.2 (v1.2.0)</span>
+        </div>
+      </div>
+      <button onclick="closeModal('drawerModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Zavřít</button>
+    </div>
+
+    <div class="mb-3">
+      <button onclick="printGroupSettlementReport()" class="w-full py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-black flex items-center justify-center gap-2 shadow-md">
+        <span>📄</span>
+        <span>Vytisknout / Uložit kompletní PDF vyúčtování</span>
+      </button>
+    </div>
+
+    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 mb-3">
+      <div class="flex justify-between items-center text-xs font-bold mb-1.5">
+        <span>💾 Využití offline paměti (LocalStorage)</span>
+        <span id="storageMeterLabel" class="text-indigo-600">0 KB / 5120 KB</span>
+      </div>
+      <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+        <div id="storageMeterFill" class="h-full bg-indigo-600" style="width: 1%;"></div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 mb-3">
+      <button onclick="exportAllDataJSON()" class="py-2.5 px-2 rounded-xl bg-indigo-600 text-white text-xs font-black">
+        ⬇️ Záloha JSON
+      </button>
+      <label class="py-2.5 px-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-black text-center cursor-pointer flex items-center justify-center">
+        ⬆️ Obnovit JSON
+        <input type="file" accept=".json,application/json" class="hidden" onchange="importAllDataJSON(event)">
+      </label>
+      <button onclick="resetToDefaultDemo()" class="py-2.5 px-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold">
+        🔄 Vzor
+      </button>
+    </div>
+
+    <div class="text-center text-[11px] text-slate-400 font-semibold pt-2 border-t border-slate-100">
+      Kvit • verze 1.2 • Jsme si kvit — Více měn, vlastní kurzy, Firebase synchronizace a oddělená vyrovnání
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     OBLAST PRO PDF EXPORT (@media print)
+     ========================================================================== -->
+<div id="printReportArea"></div>
+
+<!-- FIREBASE SDK & CLOUD SYNCHRONIZACE (h5page-app) -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDWlKHYc2M4kQ_rjDeEW7_reG8XcMCC1tM",
+  authDomain: "h5page-app.firebaseapp.com",
+  projectId: "h5page-app",
+  storageBucket: "h5page-app.firebasestorage.app",
+  messagingSenderId: "880447243523",
+  appId: "1:880447243523:web:78b61950628d4056db1536",
+  measurementId: "G-LBZW04FBC3"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+window.KvitFirebase = {
+  currentUser: null,
+  isSyncing: false,
+
+  updateUI(user) {
+    const dot = document.getElementById('cloudStatusDot');
+
+    const badge = document.getElementById('fbSyncStatusBadge');
+    const infoBox = document.getElementById('fbUserInfoBox');
+    const modalAvatar = document.getElementById('fbModalAvatar');
+    const modalName = document.getElementById('fbModalName');
+    const modalEmail = document.getElementById('fbModalEmail');
+    const modalBtn = document.getElementById('fbModalAuthBtn');
+    const manualControls = document.getElementById('fbManualSyncControls');
+
+    if (user) {
+      const initial = encodeURIComponent((user.displayName || 'U').charAt(0).toUpperCase());
+      const fallbackAvatar = `https://placehold.co/96x96/4f46e5/ffffff?text=${initial}`;
+      const photo = user.photoURL || fallbackAvatar;
+
+      if (dot) dot.style.backgroundColor = '#34d399';
+
+      if (badge) {
+        badge.textContent = 'Přihlášeno';
+        badge.className = 'text-[11px] font-bold bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded-full';
+      }
+      if (infoBox) infoBox.classList.remove('hidden');
+      if (modalAvatar) {
+        modalAvatar.src = photo;
+        modalAvatar.onerror = () => { modalAvatar.src = fallbackAvatar; };
+      }
+      if (modalName) modalName.textContent = user.displayName || 'Uživatel';
+      if (modalEmail) modalEmail.textContent = user.email || '';
+      if (modalBtn) {
+        modalBtn.textContent = '🚪 Odhlásit se z Google účtu';
+        modalBtn.className = 'w-full py-2.5 px-4 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-black mb-3';
+      }
+      if (manualControls) manualControls.classList.remove('hidden');
+    } else {
+      if (dot) dot.style.backgroundColor = '#94a3b8';
+
+      if (badge) {
+        badge.textContent = 'Odhlášeno';
+        badge.className = 'text-[11px] font-bold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full';
+      }
+      if (infoBox) infoBox.classList.add('hidden');
+      if (modalBtn) {
+        modalBtn.textContent = '👤 Přihlásit se přes Google';
+        modalBtn.className = 'w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm mb-3';
+      }
+      if (manualControls) manualControls.classList.add('hidden');
+    }
+  },
+
+  async handleAuthAction() {
+    if (this.currentUser) {
+      try {
+        await signOut(auth);
+        if (typeof showToast === 'function') showToast('🚪 Odhlášeno z Firebase');
+      } catch (err) {
+        console.error('Chyba odhlášení:', err);
+        if (typeof showToast === 'function') showToast('❌ Chyba při odhlášení');
+      }
+    } else {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        if (err.code !== 'auth/popup-closed-by-user' && typeof showToast === 'function') {
+          showToast('❌ Chyba přihlášení: ' + (err.code || err.message));
+        }
+      }
+    }
+  },
+
+  async loadFromCloud(manual = false) {
+    if (!this.currentUser || this.isSyncing) return;
+    this.isSyncing = true;
+    try {
+      const docRef = doc(db, 'users', this.currentUser.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists() && docSnap.data().kvitState) {
+        const cloudState = docSnap.data().kvitState;
+        if (cloudState && Array.isArray(cloudState.groups) && typeof window.applyCloudAppState === 'function') {
+          window.applyCloudAppState(cloudState);
+          const lbl = document.getElementById('fbLastSyncText');
+          if (lbl) lbl.textContent = `Staženo z cloudu: ${new Date().toLocaleTimeString('cs-CZ')}`;
+          if (typeof showToast === 'function') showToast('☁️ Data Kvitu stažena z Firebase');
+        }
+      } else {
+        await this.saveToCloud(false);
+        if (manual && typeof showToast === 'function') showToast('☁️ Lokální data poprvé uložena do Firebase');
+      }
+    } catch (err) {
+      console.error('Chyba čtení Firebase:', err);
+      if (typeof showToast === 'function') showToast('❌ Chyba při stahování z Firebase');
+    } finally {
+      this.isSyncing = false;
+    }
+  },
+
+  async saveToCloud(manual = false) {
+    if (!this.currentUser || typeof window.getAppStateForCloud !== 'function') return;
+    try {
+      const cleanState = JSON.parse(JSON.stringify(window.getAppStateForCloud()));
+      const docRef = doc(db, 'users', this.currentUser.uid);
+      await setDoc(docRef, {
+        kvitState: cleanState,
+        kvitUpdatedAt: serverTimestamp()
+      }, { merge: true });
+
+      const lbl = document.getElementById('fbLastSyncText');
+      if (lbl) lbl.textContent = `Uloženo do cloudu: ${new Date().toLocaleTimeString('cs-CZ')}`;
+      if (manual && typeof showToast === 'function') showToast('☁️ Uloženo do Firebase');
+    } catch (err) {
+      console.error('Chyba zápisu Firebase:', err);
+      if (manual && typeof showToast === 'function') showToast('❌ Chyba při ukládání do Firebase');
+    }
+  }
+};
+
+onAuthStateChanged(auth, async (user) => {
+  window.KvitFirebase.currentUser = user;
+  window.KvitFirebase.updateUI(user);
+  if (user) {
+    await window.KvitFirebase.loadFromCloud(false);
+  }
+});
+</script>
+
+<script>
+/* ============================================================================
+   1. GLOBÁLNÍ DATA & KONFIGURACE v1.2
+   ============================================================================ */
+const APP_VERSION = '1.2.0';
+const STORAGE_KEY = 'KVIT_APP_DATA_V12';
+const SERVER_URL_KEY = 'KVIT_PI_SERVER_URL';
+const MAX_STORAGE_BYTES = 5 * 1024 * 1024;
+const DEFAULT_PI_SERVER_URL = 'http://raspberrypi.local/sync.php';
+
+const THEME_PALETTES = {
+  purple:  { bg: '#6c42c4', dark: '#522ca0', meta: '#6c42c4' },
+  lime:    { bg: '#9cc13b', dark: '#7ea325', meta: '#9cc13b' },
+  teal:    { bg: '#0ea5e9', dark: '#0284c7', meta: '#0ea5e9' },
+  amber:   { bg: '#d97706', dark: '#b45309', meta: '#d97706' },
+  crimson: { bg: '#e11d48', dark: '#be123c', meta: '#e11d48' }
+};
+
+const AVATAR_BG_COLORS = ['#0284c7', '#d97706', '#059669', '#7c3aed', '#db2777', '#dc2626', '#4f46e5'];
+
+const SORT_MODES = [
+  { key: 'DATE_DESC',  label: 'Dle data ↓' },
+  { key: 'ADDED_DESC', label: 'Dle přidání' },
+  { key: 'PAYER_ASC',  label: 'Kdo platil' },
+  { key: 'PRICE_DESC', label: 'Dle ceny ↓' }
+];
+let currentSortModeIndex = 0;
+
+let appState = null;
+let memoryFallback = '';
+let currentSplitMode = 'EQUAL';
+let currentPaymentMethod = 'CASH';
+let currentTxCategoryFilter = 'ALL';
+let activeEditingSplitsBackup = null;
+let activeEditingSharesBackup = null;
+let activeEditingOtherAmountBackup = 0;
+let bubbles = [];
+let dragState = {
+  active: false,
+  sourceBubble: null,
+  targetBubble: null,
+  startX: 0,
+  startY: 0,
+  currX: 0,
+  currY: 0,
+  moved: false
+};
+let activeDragSettlePair = { fromId: null, toId: null };
+
+function getDefaultDemoState() {
+  return {
+    version: APP_VERSION,
+    activeGroupId: 'grp-roadtrip',
+    groups: [
+      {
+        id: 'grp-roadtrip',
+        name: 'Road Trip',
+        destination: 'Rakousko • Slovinsko • Chorvatsko',
+        syncCode: 'ROAD01',
+        theme: 'purple',
+        currency: 'EUR',
+        rateToCzk: 25.00,
+        currencies: [
+          { code: 'EUR', rate: 25.00 },
+          { code: 'PLN', rate: 5.85 },
+          { code: 'CHF', rate: 26.80 },
+          { code: 'CZK', rate: 1.00 }
+        ],
+        isTemplate: true,
+        members: [
+          { id: 'm-kaylee', name: 'Kaylee', emoji: '🦊', color: '#059669', weight: 1, account: '123456789/0800' },
+          { id: 'm-zoe', name: 'Zoe', emoji: '🐼', color: '#0284c7', weight: 1, account: '987654321/0100' },
+          { id: 'm-malcolm', name: 'Malcolm', emoji: '🤠', color: '#d97706', weight: 1, account: '2200112233/2010' },
+          { id: 'm-jayne', name: 'Jayne', emoji: '😎', color: '#7c3aed', weight: 1, account: '1122334455/0300' }
+        ],
+        expenses: [
+          {
+            id: 'tx-101',
+            title: 'Museum',
+            category: 'Muzea & Vstupy',
+            amount: 30,
+            currency: 'EUR',
+            customRate: 25.00,
+            paymentMethod: 'CARD',
+            paidBy: 'm-jayne',
+            splits: { 'm-kaylee': 7.5, 'm-zoe': 7.5, 'm-malcolm': 7.5, 'm-jayne': 7.5 },
+            date: '30. 10. 12:37',
+            updatedAt: 1730288220000
+          },
+          {
+            id: 'tx-102',
+            title: 'Camping',
+            category: 'Kemp & Ubytování',
+            amount: 80,
+            currency: 'EUR',
+            customRate: 25.00,
+            paymentMethod: 'CASH',
+            paidBy: 'm-kaylee',
+            splits: { 'm-kaylee': 20, 'm-zoe': 20, 'm-malcolm': 20, 'm-jayne': 20 },
+            date: '30. 10. 10:37',
+            updatedAt: 1730281020000
+          },
+          {
+            id: 'tx-103',
+            title: 'Večeře v přístavu',
+            category: 'Jídlo & Pití',
+            amount: 115,
+            currency: 'EUR',
+            customRate: 25.25,
+            paymentMethod: 'CARD',
+            paidBy: 'm-zoe',
+            splits: { 'm-kaylee': 28.75, 'm-zoe': 28.75, 'm-malcolm': 28.75, 'm-jayne': 28.75 },
+            date: '29. 10. 21:38',
+            updatedAt: 1730249880000
+          },
+          {
+            id: 'tx-104',
+            title: 'Beer',
+            category: 'Jídlo & Pití',
+            amount: 20,
+            currency: 'EUR',
+            customRate: 25.00,
+            paymentMethod: 'CASH',
+            paidBy: 'm-malcolm',
+            splits: { 'm-kaylee': 5, 'm-zoe': 5, 'm-malcolm': 5, 'm-jayne': 5 },
+            date: '29. 10. 19:15',
+            updatedAt: 1730241300000
+          }
+        ]
+      }
+    ]
+  };
+}
+
+function normalizeGroupCurrencies(grp) {
+  if (!grp) return;
+  if (!grp.destination) grp.destination = '';
+  if (!Array.isArray(grp.currencies) || grp.currencies.length === 0) {
+    const mainCode = (grp.currency || 'EUR').toUpperCase();
+    const mainRate = Number(grp.rateToCzk) || (mainCode === 'CZK' ? 1 : 25.0);
+    grp.currencies = [{ code: mainCode, rate: mainRate }];
+    if (mainCode !== 'CZK') {
+      grp.currencies.push({ code: 'CZK', rate: 1.0 });
+    }
+  } else {
+    const hasCzk = grp.currencies.some(c => c.code === 'CZK');
+    if (!hasCzk) grp.currencies.push({ code: 'CZK', rate: 1.0 });
+  }
+  grp.currency = grp.currencies[0].code;
+  grp.rateToCzk = grp.currencies[0].rate;
+}
+
+function getCurrencyDefaultRateToCzk(grp, code) {
+  if (!code || code === 'CZK') return 1.0;
+  normalizeGroupCurrencies(grp);
+  const found = (grp.currencies || []).find(c => c.code === code);
+  if (found && Number(found.rate) > 0) return Number(found.rate);
+  if (code === grp.currency && Number(grp.rateToCzk) > 0) return Number(grp.rateToCzk);
+  return 1.0;
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+      || localStorage.getItem('KVIT_APP_DATA_V11')
+      || localStorage.getItem('KVIT_APP_DATA_V10')
+      || localStorage.getItem('KVIT_APP_DATA_V05')
+      || localStorage.getItem('SETTLEUP_BUBBLE_SYNC_V081');
+    if (raw) {
+      appState = JSON.parse(raw);
+      appState.version = APP_VERSION;
+      (appState.groups || []).forEach(normalizeGroupCurrencies);
+    } else {
+      appState = getDefaultDemoState();
+      saveState(true);
+    }
+  } catch (e) {
+    appState = getDefaultDemoState();
+  }
+
+  if (window.location.hash && window.location.hash.startsWith('#sync=')) {
+    const payload = decodeURIComponent(window.location.hash.slice(6));
+    const mergedCount = importCompactSyncPayload(payload, true);
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (mergedCount >= 0) {
+      setTimeout(() => showToast(`🔄 Synchronizováno z odkazu (+${mergedCount} změn)`), 350);
+    }
+  }
+}
+
+function saveState(skipCloud = false) {
+  const serialized = JSON.stringify(appState);
+  memoryFallback = serialized;
+  try {
+    localStorage.setItem(STORAGE_KEY, serialized);
+  } catch (e) {
+    showToast('⚠️ Paměť prohlížeče je plná!');
+  }
+  updateStorageMeter();
+
+  if (!skipCloud && window.KvitFirebase && window.KvitFirebase.currentUser) {
+    window.KvitFirebase.saveToCloud(false);
+  }
+}
+
+window.getAppStateForCloud = function() {
+  return appState;
+};
+
+window.applyCloudAppState = function(cloudState) {
+  appState = cloudState;
+  appState.version = APP_VERSION;
+  (appState.groups || []).forEach(normalizeGroupCurrencies);
+  saveState(true);
+  renderApp();
+};
+
+function getActiveGroup() {
+  let grp = appState.groups.find(g => g.id === appState.activeGroupId);
+  if (!grp) {
+    grp = appState.groups[0];
+    appState.activeGroupId = grp.id;
+  }
+  normalizeGroupCurrencies(grp);
+  return grp;
+}
+
+function updateStorageMeter() {
+  let bytes = 0;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY) || memoryFallback || '';
+    bytes = (STORAGE_KEY.length + raw.length) * 2;
+  } catch (e) {
+    bytes = memoryFallback.length * 2;
+  }
+  const kb = (bytes / 1024).toFixed(1);
+  const pct = Math.min(100, (bytes / MAX_STORAGE_BYTES) * 100);
+  const lbl = document.getElementById('storageMeterLabel');
+  const fill = document.getElementById('storageMeterFill');
+  if (lbl) lbl.textContent = `${kb} KB / 5120 KB (${pct.toFixed(1)}%)`;
+  if (fill) fill.style.width = `${Math.max(1.5, pct)}%`;
+}
+
+/* ============================================================================
+   2. MATEMATIKA ZŮSTATKŮ, VÍCE MĚN, VLASTNÍHO KURZU & ODDĚLENÍ VYROVNÁNÍ
+   ============================================================================ */
+function isSettlementOrAdvance(category) {
+  return category === 'Vyrovnání' || category === 'Záloha';
+}
+
+function getExpenseRateToCzk(grp, tx) {
+  if (tx.currency === 'CZK') return 1.0;
+  if (tx.customRate && Number(tx.customRate) > 0) return Number(tx.customRate);
+  return getCurrencyDefaultRateToCzk(grp, tx.currency);
+}
+
+function convertTxAmountToGroupBase(grp, amountInTxCurr, tx) {
+  const amt = Number(amountInTxCurr) || 0;
+  const txRateToCzk = getExpenseRateToCzk(grp, tx);
+  const baseRateToCzk = getCurrencyDefaultRateToCzk(grp, grp.currency);
+  const amountInCzk = amt * txRateToCzk;
+  return baseRateToCzk > 0 ? (amountInCzk / baseRateToCzk) : amountInCzk;
+}
+
+function computeGroupBalances(grp) {
+  normalizeGroupCurrencies(grp);
+  const baseRateToCzk = getCurrencyDefaultRateToCzk(grp, grp.currency);
+  const map = {};
+  (grp.members || []).forEach(m => {
+    map[m.id] = {
+      ...m,
+      paidExpense: 0,
+      tripCostShare: 0,
+      settleSent: 0,
+      settleReceived: 0,
+      paid: 0,
+      share: 0,
+      net: 0,
+      netCzk: 0
+    };
+  });
+
+  let totalSpent = 0;
+  let totalSpentCzk = 0;
+
+  (grp.expenses || []).forEach(tx => {
+    const amt = Number(tx.amount) || 0;
+    const txRateToCzk = getExpenseRateToCzk(grp, tx);
+    const inCzk = amt * txRateToCzk;
+    const inBase = baseRateToCzk > 0 ? (inCzk / baseRateToCzk) : amt;
+    const isTransfer = isSettlementOrAdvance(tx.category);
+
+    if (!isTransfer) {
+      totalSpent += inBase;
+      totalSpentCzk += inCzk;
+    }
+
+    if (map[tx.paidBy]) {
+      map[tx.paidBy].paid += inBase;
+      if (isTransfer) {
+        map[tx.paidBy].settleSent += inBase;
+      } else {
+        map[tx.paidBy].paidExpense += inBase;
+      }
+    }
+
+    const splits = tx.splits || {};
+    Object.keys(splits).forEach(mId => {
+      if (map[mId]) {
+        const sVal = Number(splits[mId]) || 0;
+        const sInCzk = sVal * txRateToCzk;
+        const sBase = baseRateToCzk > 0 ? (sInCzk / baseRateToCzk) : sVal;
+        map[mId].share += sBase;
+        if (isTransfer) {
+          map[mId].settleReceived += sBase;
+        } else {
+          map[mId].tripCostShare += sBase;
+        }
+      }
+    });
+  });
+
+  const list = Object.values(map).map(m => {
+    m.net = Number((m.paid - m.share).toFixed(2));
+    m.netCzk = Math.round(m.net * baseRateToCzk);
+    return m;
+  });
+
+  let worstDebtorId = null;
+  let minBalance = -0.01;
+  list.forEach(m => {
+    if (m.net < minBalance) {
+      minBalance = m.net;
+      worstDebtorId = m.id;
+    }
+  });
+
+  return {
+    totalSpent,
+    totalSpentCzk: Math.round(totalSpentCzk),
+    worstDebtorId,
+    balances: list
+  };
+}
+
+function calculateMinimumSettlements(grp) {
+  const { balances } = computeGroupBalances(grp);
+  const baseRateToCzk = getCurrencyDefaultRateToCzk(grp, grp.currency);
+
+  const debtors = [];
+  const creditors = [];
+
+  balances.forEach(b => {
+    if (b.net < -0.01) debtors.push({ ...b, rem: Math.abs(b.net) });
+    else if (b.net > 0.01) creditors.push({ ...b, rem: b.net });
+  });
+
+  debtors.sort((a, b) => b.rem - a.rem);
+  creditors.sort((a, b) => b.rem - a.rem);
+
+  const settlements = [];
+  let i = 0, j = 0;
+
+  while (i < debtors.length && j < creditors.length) {
+    const d = debtors[i];
+    const c = creditors[j];
+    const amt = Math.min(d.rem, c.rem);
+
+    if (amt > 0.01) {
+      settlements.push({
+        fromId: d.id,
+        fromName: d.name,
+        fromEmoji: d.emoji,
+        fromColor: d.color,
+        toId: c.id,
+        toName: c.name,
+        toEmoji: c.emoji,
+        toColor: c.color,
+        toAccount: c.account || '',
+        amountLocal: Number(amt.toFixed(2)),
+        amountCzk: Math.round(amt * baseRateToCzk)
+      });
+    }
+
+    d.rem -= amt;
+    c.rem -= amt;
+    if (d.rem < 0.01) i++;
+    if (c.rem < 0.01) j++;
+  }
+
+  return settlements;
+}
+
+/* ============================================================================
+   3. ŘAZENÍ TRANSAKCÍ
+   ============================================================================ */
+function parseCzDateToSortableNumber(dateStr, fallbackTimestamp) {
+  if (!dateStr) return fallbackTimestamp || 0;
+  const m = String(dateStr).match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(?:(\d{4})\s*)?(?:(\d{1,2}):(\d{2}))?/);
+  if (!m) return fallbackTimestamp || 0;
+  const day = parseInt(m[1], 10) || 1;
+  const month = parseInt(m[2], 10) || 1;
+  const year = m[3] ? parseInt(m[3], 10) : 2026;
+  const hour = m[4] ? parseInt(m[4], 10) : 0;
+  const min = m[5] ? parseInt(m[5], 10) : 0;
+  return new Date(year, month - 1, day, hour, min).getTime();
+}
+
+function cycleSortMode() {
+  currentSortModeIndex = (currentSortModeIndex + 1) % SORT_MODES.length;
+  const mode = SORT_MODES[currentSortModeIndex];
+  const lbl = document.getElementById('sortBtnLabel');
+  if (lbl) lbl.textContent = mode.label;
+  renderTransactionsFeed();
+  showToast(`🔃 Řazení: ${mode.label}`);
+}
+
+function getSortedExpenses(grp, list) {
+  const modeKey = SORT_MODES[currentSortModeIndex].key;
+  const membersById = {};
+  (grp.members || []).forEach(m => { membersById[m.id] = m; });
+
+  return list.slice().sort((a, b) => {
+    if (modeKey === 'DATE_DESC') {
+      const tA = parseCzDateToSortableNumber(a.date, a.updatedAt);
+      const tB = parseCzDateToSortableNumber(b.date, b.updatedAt);
+      if (tB !== tA) return tB - tA;
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    }
+    if (modeKey === 'ADDED_DESC') {
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    }
+    if (modeKey === 'PAYER_ASC') {
+      const pA = (membersById[a.paidBy]?.name || '').toLowerCase();
+      const pB = (membersById[b.paidBy]?.name || '').toLowerCase();
+      if (pA !== pB) return pA.localeCompare(pB, 'cs');
+      return parseCzDateToSortableNumber(b.date, b.updatedAt) - parseCzDateToSortableNumber(a.date, a.updatedAt);
+    }
+    if (modeKey === 'PRICE_DESC') {
+      const vA = (Number(a.amount) || 0) * getExpenseRateToCzk(grp, a);
+      const vB = (Number(b.amount) || 0) * getExpenseRateToCzk(grp, b);
+      return vB - vA;
+    }
+    return 0;
+  });
+}
+
+/* ============================================================================
+   4. BUBBLE ENGINE
+   ============================================================================ */
+function buildBubblesForGroup(grp) {
+  const canvas = document.getElementById('bubbleCanvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width || 420;
+  const h = rect.height || 285;
+
+  const { balances, worstDebtorId } = computeGroupBalances(grp);
+  const maxAbs = Math.max(10, ...balances.map(b => Math.abs(b.net)));
+
+  const centerX = w / 2;
+  const centerY = h / 2 - 6;
+
+  bubbles = balances.map((b, idx) => {
+    const ratio = Math.min(1, Math.abs(b.net) / maxAbs);
+    const radius = Math.round(40 + ratio * 28);
+    const angle = (idx / Math.max(1, balances.length)) * Math.PI * 2 - Math.PI / 3;
+    const spread = b.id === worstDebtorId ? 12 : 68;
+
+    return {
+      id: b.id,
+      name: b.name,
+      emoji: b.emoji,
+      net: b.net,
+      currency: grp.currency,
+      isWorstDebtor: b.id === worstDebtorId,
+      r: radius,
+      x: centerX + Math.cos(angle) * spread,
+      y: centerY + Math.sin(angle) * spread,
+      vx: 0,
+      vy: 0
+    };
+  });
+
+  for (let step = 0; step < 90; step++) {
+    stepBubblePhysics(w, h);
+  }
+  drawBubbleStage();
+}
+
+function stepBubblePhysics(w, h) {
+  const cx = w / 2;
+  const cy = h / 2 - 6;
+
+  for (let i = 0; i < bubbles.length; i++) {
+    const a = bubbles[i];
+    if (dragState.active && dragState.sourceBubble && dragState.sourceBubble.id === a.id) continue;
+
+    const pull = a.isWorstDebtor ? 0.045 : 0.025;
+    a.vx += (cx - a.x) * pull;
+    a.vy += (cy - a.y) * pull;
+
+    for (let j = i + 1; j < bubbles.length; j++) {
+      const b = bubbles[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const minDist = a.r + b.r + 4;
+      if (dist < minDist) {
+        const overlap = (minDist - dist) * 0.18;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        if (!(dragState.active && dragState.sourceBubble && dragState.sourceBubble.id === a.id)) {
+          a.x -= nx * overlap;
+          a.y -= ny * overlap;
+        }
+        if (!(dragState.active && dragState.sourceBubble && dragState.sourceBubble.id === b.id)) {
+          b.x += nx * overlap;
+          b.y += ny * overlap;
+        }
+      }
+    }
+
+    a.vx *= 0.75;
+    a.vy *= 0.75;
+    a.x += a.vx;
+    a.y += a.vy;
+
+    const pad = a.r + 8;
+    a.x = Math.max(pad, Math.min(w - pad, a.x));
+    a.y = Math.max(pad, Math.min(h - pad - 18, a.y));
+  }
+}
+
+function drawBubbleStage() {
+  const canvas = document.getElementById('bubbleCanvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = rect.width || 420;
+  const h = rect.height || 285;
+
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+  }
+
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  if (dragState.active && dragState.sourceBubble) {
+    const src = dragState.sourceBubble;
+    const dst = dragState.targetBubble;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(src.x, src.y);
+    ctx.lineTo(dst ? dst.x : dragState.currX, dst ? dst.y : dragState.currY);
+    ctx.strokeStyle = dst ? '#fde047' : 'rgba(255, 255, 255, 0.55)';
+    ctx.lineWidth = dst ? 4 : 2.5;
+    ctx.setLineDash([6, 5]);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const ordered = bubbles.slice().sort((a, b) => {
+    if (dragState.sourceBubble && a.id === dragState.sourceBubble.id) return 1;
+    if (dragState.sourceBubble && b.id === dragState.sourceBubble.id) return -1;
+    if (a.isWorstDebtor) return 1;
+    if (b.isWorstDebtor) return -1;
+    return 0;
+  });
+
+  ordered.forEach(b => {
+    const isTarget = dragState.targetBubble && dragState.targetBubble.id === b.id;
+    const isDragged = dragState.sourceBubble && dragState.sourceBubble.id === b.id && dragState.active;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, isDragged ? b.r * 1.06 : b.r, 0, Math.PI * 2);
+
+    if (b.isWorstDebtor) {
+      ctx.fillStyle = 'rgba(12, 14, 20, 0.92)';
+    } else if (b.net < -0.01) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    } else {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.26)';
+    }
+    ctx.fill();
+
+    if (isTarget) {
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#fde047';
+      ctx.stroke();
+    } else if (isDragged) {
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const nameFontSize = Math.max(12, Math.min(16, Math.round(b.r * 0.27)));
+    const amtFontSize = Math.max(11, Math.min(15, Math.round(b.r * 0.25)));
+
+    ctx.font = `700 ${nameFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.fillText(b.name, b.x, b.y - (b.isWorstDebtor ? 12 : 8));
+
+    const sign = b.net > 0 ? '+' : '';
+    const formattedAmt = `${sign}${b.net.toFixed(2)} ${b.currency}`;
+    ctx.font = `800 ${amtFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.fillStyle = b.net < -0.01 ? 'rgba(255,255,255,0.88)' : '#ffffff';
+    ctx.fillText(formattedAmt, b.x, b.y + (b.isWorstDebtor ? 5 : 10));
+
+    if (b.isWorstDebtor) {
+      ctx.font = `600 10px -apple-system, BlinkMacSystemFont, sans-serif`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+      ctx.fillText('měl(a) by platit', b.x, b.y + 21);
+    }
+
+    ctx.restore();
+  });
+
+  if (dragState.active && dragState.sourceBubble && dragState.targetBubble) {
+    const s = dragState.sourceBubble;
+    const t = dragState.targetBubble;
+    const label = `⚡ Pustit pro vyrovnání: ${s.name} ➔ ${t.name}`;
+    ctx.save();
+    ctx.font = '800 12px -apple-system, BlinkMacSystemFont, sans-serif';
+    const tw = ctx.measureText(label).width + 22;
+    const tx = Math.max(tw / 2 + 8, Math.min(w - tw / 2 - 8, (s.x + t.x) / 2));
+    const ty = Math.max(24, Math.min(h - 36, (s.y + t.y) / 2 - 28));
+
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(tx - tw / 2, ty - 14, tw, 28, 14);
+    ctx.fill();
+
+    ctx.fillStyle = '#fde047';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, tx, ty);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function initBubbleCanvasEvents() {
+  const canvas = document.getElementById('bubbleCanvas');
+  if (!canvas) return;
+
+  function getPointerPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  function onPointerDown(e) {
+    const pos = getPointerPos(e);
+    let hit = null;
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      if (Math.hypot(pos.x - b.x, pos.y - b.y) <= b.r) {
+        hit = b;
+        break;
+      }
+    }
+    if (!hit) return;
+    if (e.cancelable) e.preventDefault();
+
+    dragState.active = true;
+    dragState.sourceBubble = hit;
+    dragState.targetBubble = null;
+    dragState.startX = pos.x;
+    dragState.startY = pos.y;
+    dragState.currX = pos.x;
+    dragState.currY = pos.y;
+    dragState.moved = false;
+    drawBubbleStage();
+  }
+
+  function onPointerMove(e) {
+    if (!dragState.active || !dragState.sourceBubble) return;
+    if (e.cancelable) e.preventDefault();
+    const pos = getPointerPos(e);
+    dragState.currX = pos.x;
+    dragState.currY = pos.y;
+
+    if (Math.hypot(pos.x - dragState.startX, pos.y - dragState.startY) > 8) {
+      dragState.moved = true;
+    }
+
+    dragState.sourceBubble.x = pos.x;
+    dragState.sourceBubble.y = pos.y;
+
+    let target = null;
+    for (let i = 0; i < bubbles.length; i++) {
+      const other = bubbles[i];
+      if (other.id === dragState.sourceBubble.id) continue;
+      const dist = Math.hypot(pos.x - other.x, pos.y - other.y);
+      if (dist < other.r + 18) {
+        target = other;
+        break;
+      }
+    }
+    dragState.targetBubble = target;
+    drawBubbleStage();
+  }
+
+  function onPointerUp() {
+    if (!dragState.active) return;
+    const src = dragState.sourceBubble;
+    const dst = dragState.targetBubble;
+    const wasMoved = dragState.moved;
+
+    dragState.active = false;
+    dragState.sourceBubble = null;
+    dragState.targetBubble = null;
+
+    const grp = getActiveGroup();
+    if (src && dst && src.id !== dst.id) {
+      openDragSettleModal(src.id, dst.id);
+    } else if (src && !wasMoved) {
+      openMemberOverviewModal(src.id);
+    }
+
+    buildBubblesForGroup(grp);
+  }
+
+  canvas.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
+  canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+  window.addEventListener('touchmove', onPointerMove, { passive: false });
+  window.addEventListener('touchend', onPointerUp);
+
+  window.addEventListener('resize', () => {
+    buildBubblesForGroup(getActiveGroup());
+  });
+}
+
+/* ============================================================================
+   5. OSOBNÍ PŘEHLED ČLENA
+   ============================================================================ */
+function openMemberOverviewModal(memberId) {
+  const grp = getActiveGroup();
+  const mem = (grp.members || []).find(m => m.id === memberId);
+  if (!mem) return;
+
+  const baseRate = getCurrencyDefaultRateToCzk(grp, grp.currency);
+  const { balances } = computeGroupBalances(grp);
+  const bStat = balances.find(b => b.id === memberId) || {
+    paidExpense: 0, tripCostShare: 0, settleSent: 0, settleReceived: 0, net: 0, netCzk: 0
+  };
+
+  const avatarEl = document.getElementById('ovMemberAvatar');
+  avatarEl.textContent = mem.emoji || mem.name.slice(0, 1);
+  avatarEl.style.backgroundColor = mem.color || '#0284c7';
+
+  document.getElementById('ovMemberName').textContent = mem.name;
+  document.getElementById('ovMemberAccount').textContent = mem.account ? `Účet: ${mem.account}` : 'Bankovní účet nezadán';
+
+  document.getElementById('ovBtnEditMember').onclick = () => {
+    openEditSingleMemberModal(memberId);
+  };
+
+  document.getElementById('ovBtnAddExpenseByMember').onclick = () => {
+    closeModal('memberOverviewModal');
+    openExpenseModal(null, memberId);
+  };
+
+  document.getElementById('ovTotalPaid').textContent = `${bStat.paidExpense.toFixed(2)} ${grp.currency}`;
+  document.getElementById('ovTotalPaidCzk').textContent = `${Math.round(bStat.paidExpense * baseRate).toLocaleString('cs-CZ')} Kč`;
+
+  document.getElementById('ovTotalShare').textContent = `${bStat.tripCostShare.toFixed(2)} ${grp.currency}`;
+  document.getElementById('ovTotalShareCzk').textContent = `${Math.round(bStat.tripCostShare * baseRate).toLocaleString('cs-CZ')} Kč`;
+
+  document.getElementById('ovTotalSettlements').textContent = `+${bStat.settleSent.toFixed(1)} / -${bStat.settleReceived.toFixed(1)} ${grp.currency}`;
+  document.getElementById('ovTotalSettlementsCzk').textContent = `Dal(a): ${Math.round(bStat.settleSent * baseRate)} Kč • Přijal(a): ${Math.round(bStat.settleReceived * baseRate)} Kč`;
+
+  const sign = bStat.net > 0 ? '+' : '';
+  const netEl = document.getElementById('ovTotalNet');
+  const netCzkEl = document.getElementById('ovTotalNetCzk');
+  const netBox = document.getElementById('ovNetBox');
+
+  netEl.textContent = `${sign}${bStat.net.toFixed(2)} ${grp.currency}`;
+  netCzkEl.textContent = `${sign}${bStat.netCzk.toLocaleString('cs-CZ')} Kč`;
+
+  if (bStat.net > 0.01) {
+    netBox.className = 'bg-emerald-50 border border-emerald-200 p-2.5 rounded-2xl';
+    netEl.className = 'text-sm font-black text-emerald-700 mt-0.5';
+    netCzkEl.className = 'text-[11px] font-bold text-emerald-600';
+  } else if (bStat.net < -0.01) {
+    netBox.className = 'bg-rose-50 border border-rose-200 p-2.5 rounded-2xl';
+    netEl.className = 'text-sm font-black text-rose-700 mt-0.5';
+    netCzkEl.className = 'text-[11px] font-bold text-rose-600';
+  } else {
+    netBox.className = 'bg-slate-50 border border-slate-200 p-2.5 rounded-2xl';
+    netEl.className = 'text-sm font-black text-slate-700 mt-0.5';
+    netCzkEl.className = 'text-[11px] font-semibold text-slate-400';
+  }
+
+  const membersById = {};
+  (grp.members || []).forEach(m => { membersById[m.id] = m; });
+  const allExpenses = getSortedExpenses(grp, grp.expenses || []);
+
+  const paidList = allExpenses.filter(tx => tx.paidBy === memberId && !isSettlementOrAdvance(tx.category));
+  document.getElementById('ovPaidCount').textContent = paidList.length;
+  const paidContainer = document.getElementById('ovListPaidContainer');
+
+  if (paidList.length === 0) {
+    paidContainer.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-semibold">Tato osoba zatím neplatila žádné výdaje výletu.</div>`;
+  } else {
+    paidContainer.innerHTML = paidList.map(tx => {
+      const emoji = getCategoryEmoji(tx.category);
+      const payBadge = tx.paymentMethod === 'CARD' ? '💳 Kartou' : '💵 Hotově';
+      const involvedNames = Object.keys(tx.splits || {})
+        .filter(id => Number(tx.splits[id]) > 0)
+        .map(id => membersById[id]?.name || '?').join(', ');
+
+      return `
+        <div onclick="closeModal('memberOverviewModal'); openExpenseModal('${tx.id}');" class="p-3 rounded-xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200 flex items-center justify-between gap-2 cursor-pointer transition">
+          <div class="min-w-0">
+            <div class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5 truncate">
+              <span>${emoji}</span>
+              <span class="truncate">${escapeHtml(tx.title)}</span>
+              <span class="text-[10px] font-normal text-slate-500">(${payBadge})</span>
+            </div>
+            <div class="text-[11px] text-slate-500 truncate mt-0.5">
+              Pro: <span class="font-semibold text-slate-700">${escapeHtml(involvedNames)}</span>
+            </div>
+            <div class="text-[10px] text-slate-400">${escapeHtml(tx.date || '')}</div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <div class="text-sm font-black text-emerald-600">+${Number(tx.amount).toFixed(2)} ${escapeHtml(tx.currency)}</div>
+            <div class="text-[10px] font-bold text-indigo-600">Upravit ➔</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const consumedList = allExpenses.filter(tx => !isSettlementOrAdvance(tx.category) && tx.splits && Number(tx.splits[memberId]) > 0);
+  document.getElementById('ovConsumedCount').textContent = consumedList.length;
+  const consumedContainer = document.getElementById('ovListConsumedContainer');
+
+  if (consumedList.length === 0) {
+    consumedContainer.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-semibold">Žádné náklady na výlet.</div>`;
+  } else {
+    consumedContainer.innerHTML = consumedList.map(tx => {
+      const emoji = getCategoryEmoji(tx.category);
+      const payerName = membersById[tx.paidBy]?.name || 'Člen';
+      const myShare = Number(tx.splits[memberId]) || 0;
+
+      return `
+        <div onclick="closeModal('memberOverviewModal'); openExpenseModal('${tx.id}');" class="p-3 rounded-xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200 flex items-center justify-between gap-2 cursor-pointer transition">
+          <div class="min-w-0">
+            <div class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5 truncate">
+              <span>${emoji}</span>
+              <span class="truncate">${escapeHtml(tx.title)}</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-0.5">
+              Platil(a): <strong class="text-slate-700">${escapeHtml(payerName)}</strong> (celkem ${Number(tx.amount).toFixed(2)} ${escapeHtml(tx.currency)})
+            </div>
+            <div class="text-[10px] text-slate-400">${escapeHtml(tx.date || '')}</div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <div class="text-sm font-black text-amber-600">-${myShare.toFixed(2)} ${escapeHtml(tx.currency)}</div>
+            <div class="text-[10px] text-slate-400 font-semibold">náklad osoby</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const settleList = allExpenses.filter(tx => isSettlementOrAdvance(tx.category) && (tx.paidBy === memberId || (tx.splits && Number(tx.splits[memberId]) > 0)));
+  document.getElementById('ovSettleCount').textContent = settleList.length;
+  const settleContainer = document.getElementById('ovListSettleContainer');
+
+  if (settleList.length === 0) {
+    settleContainer.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-semibold">Žádná průběžná vyrovnání ani zálohy.</div>`;
+  } else {
+    settleContainer.innerHTML = settleList.map(tx => {
+      const isSender = tx.paidBy === memberId;
+      const emoji = getCategoryEmoji(tx.category);
+      const otherIds = Object.keys(tx.splits || {}).filter(id => Number(tx.splits[id]) > 0);
+      const receiverNames = otherIds.map(id => membersById[id]?.name || '?').join(', ');
+      const senderName = membersById[tx.paidBy]?.name || '?';
+      const val = isSender ? Number(tx.amount) : Number(tx.splits[memberId] || 0);
+
+      return `
+        <div onclick="closeModal('memberOverviewModal'); openExpenseModal('${tx.id}');" class="p-3 rounded-xl bg-amber-50/60 hover:bg-amber-100/50 border border-amber-200 flex items-center justify-between gap-2 cursor-pointer transition">
+          <div class="min-w-0">
+            <div class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5 truncate">
+              <span>${emoji}</span>
+              <span class="truncate">${escapeHtml(tx.title)} (${escapeHtml(tx.category)})</span>
+            </div>
+            <div class="text-[11px] text-slate-600 mt-0.5">
+              ${isSender ? `Posláno pro: <strong>${escapeHtml(receiverNames)}</strong>` : `Přijato od: <strong>${escapeHtml(senderName)}</strong>`}
+            </div>
+            <div class="text-[10px] text-slate-400">${escapeHtml(tx.date || '')}</div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <div class="text-sm font-black ${isSender ? 'text-emerald-600' : 'text-indigo-700'}">
+              ${isSender ? '+' : '-'}${val.toFixed(2)} ${escapeHtml(tx.currency)}
+            </div>
+            <div class="text-[10px] text-slate-500 font-semibold">${isSender ? 'poslal(a)' : 'přijal(a)'}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  switchMemberOverviewTab('PAID');
+  openModal('memberOverviewModal');
+}
+
+function switchMemberOverviewTab(tab) {
+  document.getElementById('ovListPaidContainer').classList.toggle('hidden', tab !== 'PAID');
+  document.getElementById('ovListConsumedContainer').classList.toggle('hidden', tab !== 'CONSUMED');
+  document.getElementById('ovListSettleContainer').classList.toggle('hidden', tab !== 'SETTLE');
+
+  document.getElementById('ovTabBtnPaid').className = tab === 'PAID'
+    ? 'py-2 text-[11px] font-extrabold rounded-lg bg-indigo-600 text-white'
+    : 'py-2 text-[11px] font-extrabold rounded-lg text-slate-600';
+  document.getElementById('ovTabBtnConsumed').className = tab === 'CONSUMED'
+    ? 'py-2 text-[11px] font-extrabold rounded-lg bg-indigo-600 text-white'
+    : 'py-2 text-[11px] font-extrabold rounded-lg text-slate-600';
+  document.getElementById('ovTabBtnSettle').className = tab === 'SETTLE'
+    ? 'py-2 text-[11px] font-extrabold rounded-lg bg-indigo-600 text-white'
+    : 'py-2 text-[11px] font-extrabold rounded-lg text-slate-600';
+}
+
+function openEditSingleMemberModal(memberId) {
+  const grp = getActiveGroup();
+  const mem = (grp.members || []).find(m => m.id === memberId);
+  if (!mem) return;
+
+  document.getElementById('editMemberIdInp').value = mem.id;
+  document.getElementById('editMemberNameInp').value = mem.name || '';
+  document.getElementById('editMemberEmojiInp').value = mem.emoji || '🤠';
+  document.getElementById('editMemberColorInp').value = mem.color || '#0284c7';
+  document.getElementById('editMemberAccountInp').value = mem.account || '';
+
+  openModal('editMemberModal');
+}
+
+function saveMemberEdits() {
+  const grp = getActiveGroup();
+  const mId = document.getElementById('editMemberIdInp').value;
+  const mem = (grp.members || []).find(m => m.id === mId);
+  if (!mem) return;
+
+  const newName = document.getElementById('editMemberNameInp').value.trim();
+  if (!newName) {
+    showToast('⚠️ Jméno nesmí být prázdné');
+    return;
+  }
+
+  mem.name = newName;
+  mem.emoji = document.getElementById('editMemberEmojiInp').value;
+  mem.color = document.getElementById('editMemberColorInp').value;
+  mem.account = document.getElementById('editMemberAccountInp').value.trim();
+
+  saveState();
+  closeModal('editMemberModal');
+  renderApp();
+  renderEditMembersList();
+  showToast(`✅ Člen ${mem.name} upraven`);
+}
+
+function deleteMemberWithButton() {
+  const grp = getActiveGroup();
+  const mId = document.getElementById('editMemberIdInp').value;
+  const mem = (grp.members || []).find(m => m.id === mId);
+  if (!mem) return;
+
+  if (grp.members.length <= 2) {
+    showToast('⚠️ Skupina musí mít alespoň 2 členy');
+    return;
+  }
+
+  const isUsed = (grp.expenses || []).some(e => e.paidBy === mId || (e.splits && e.splits[mId]));
+  if (isUsed) {
+    showToast('⚠️ Člen má zapsané výdaje. Nejprve smažte jeho transakce.');
+    return;
+  }
+
+  grp.members = grp.members.filter(m => m.id !== mId);
+  saveState();
+  closeModal('editMemberModal');
+  renderApp();
+  renderEditMembersList();
+  showToast(`🗑️ Člen ${mem.name} byl smazán`);
+}
+
+/* ============================================================================
+   6. ÚPRAVA / PŘIDÁNÍ ÚTRATY
+   ============================================================================ */
+function setPaymentMethod(method) {
+  currentPaymentMethod = method === 'CARD' ? 'CARD' : 'CASH';
+  const btnCash = document.getElementById('payMethodBtn_CASH');
+  const btnCard = document.getElementById('payMethodBtn_CARD');
+  if (btnCash && btnCard) {
+    btnCash.className = currentPaymentMethod === 'CASH'
+      ? 'py-1.5 text-xs font-extrabold rounded-lg bg-white text-slate-900 shadow-sm'
+      : 'py-1.5 text-xs font-extrabold rounded-lg text-slate-600';
+    btnCard.className = currentPaymentMethod === 'CARD'
+      ? 'py-1.5 text-xs font-extrabold rounded-lg bg-white text-slate-900 shadow-sm'
+      : 'py-1.5 text-xs font-extrabold rounded-lg text-slate-600';
+  }
+}
+
+function populateExpenseCurrencySelect(grp, selectedCurr) {
+  normalizeGroupCurrencies(grp);
+  const sel = document.getElementById('expCurrencyInp');
+  if (!sel) return;
+  const list = grp.currencies || [];
+  sel.innerHTML = list.map(c => `
+    <option value="${escapeHtml(c.code)}" ${c.code === selectedCurr ? 'selected' : ''}>${escapeHtml(c.code)}</option>
+  `).join('');
+}
+
+function onExpenseCurrencyChange() {
+  const grp = getActiveGroup();
+  const code = document.getElementById('expCurrencyInp').value;
+  const rateBox = document.getElementById('expCustomRateBox');
+  const rateInp = document.getElementById('expCustomRateInp');
+  if (code === 'CZK') {
+    rateInp.value = '1';
+    rateInp.disabled = true;
+    rateBox.classList.add('opacity-50');
+  } else {
+    rateInp.disabled = false;
+    rateBox.classList.remove('opacity-50');
+    rateInp.value = getCurrencyDefaultRateToCzk(grp, code);
+  }
+  updateExpenseCzkEqPreview();
+  refreshExpenseSplitPreview();
+}
+
+function updateExpenseCzkEqPreview() {
+  const amt = parseFloat(document.getElementById('expAmountInp').value) || 0;
+  const code = document.getElementById('expCurrencyInp').value;
+  const rate = code === 'CZK' ? 1 : (parseFloat(document.getElementById('expCustomRateInp').value) || 1);
+  const eqCzk = Math.round(amt * rate);
+  const lbl = document.getElementById('expCzkEqLabel');
+  if (lbl) lbl.textContent = `≈ ${eqCzk.toLocaleString('cs-CZ')} Kč`;
+}
+
+function onCategorySelectChange() {
+  const cat = document.getElementById('expCategoryInp').value;
+  const titleInp = document.getElementById('expTitleInp');
+  if (cat === 'Záloha' && !titleInp.value.trim()) {
+    titleInp.value = 'Platba zálohy';
+  } else if (cat === 'Vyrovnání' && !titleInp.value.trim()) {
+    titleInp.value = 'Vyrovnání dluhu';
+  }
+}
+
+function openExpenseModal(expenseId = null, preselectedPayerId = null) {
+  const grp = getActiveGroup();
+  const isEditing = !!expenseId;
+  const tx = isEditing ? (grp.expenses || []).find(t => t.id === expenseId) : null;
+
+  document.getElementById('editingExpenseId').value = isEditing ? expenseId : '';
+  document.getElementById('expenseModalTitle').textContent = isEditing ? '✏️ Upravit útratu' : '➕ Nová útrata';
+
+  const delBtn = document.getElementById('btnDeleteExpenseInModal');
+  if (delBtn) delBtn.classList.toggle('hidden', !isEditing);
+
+  const selectedCurr = (isEditing && tx && tx.currency) ? tx.currency : grp.currency;
+  populateExpenseCurrencySelect(grp, selectedCurr);
+
+  if (isEditing && tx) {
+    document.getElementById('expTitleInp').value = tx.title || '';
+    document.getElementById('expAmountInp').value = tx.amount || '';
+    document.getElementById('expCategoryInp').value = tx.category || 'Jídlo & Pití';
+    document.getElementById('expDateInp').value = tx.date || '';
+    setPaymentMethod(tx.paymentMethod || 'CASH');
+
+    const rateInp = document.getElementById('expCustomRateInp');
+    const rateBox = document.getElementById('expCustomRateBox');
+    if (selectedCurr === 'CZK') {
+      rateInp.value = '1';
+      rateInp.disabled = true;
+      rateBox.classList.add('opacity-50');
+    } else {
+      rateInp.disabled = false;
+      rateBox.classList.remove('opacity-50');
+      rateInp.value = tx.customRate || getCurrencyDefaultRateToCzk(grp, selectedCurr);
+    }
+
+    activeEditingSplitsBackup = tx.splits ? JSON.parse(JSON.stringify(tx.splits)) : null;
+    activeEditingSharesBackup = tx.shares ? JSON.parse(JSON.stringify(tx.shares)) : null;
+    activeEditingOtherAmountBackup = Number(tx.otherExactAmount) || 0;
+  } else {
+    document.getElementById('expTitleInp').value = '';
+    document.getElementById('expAmountInp').value = '';
+    document.getElementById('expCategoryInp').value = 'Jídlo & Pití';
+    document.getElementById('expDateInp').value = formatNowTimestamp();
+    setPaymentMethod('CASH');
+    onExpenseCurrencyChange();
+    activeEditingSplitsBackup = null;
+    activeEditingSharesBackup = null;
+    activeEditingOtherAmountBackup = 0;
+  }
+
+  updateExpenseCzkEqPreview();
+
+  const payerSel = document.getElementById('expPaidByInp');
+  const { worstDebtorId } = computeGroupBalances(grp);
+  const activePayer = isEditing ? tx.paidBy : (preselectedPayerId || worstDebtorId || grp.members[0]?.id);
+
+  payerSel.innerHTML = (grp.members || []).map(m => `
+    <option value="${m.id}" ${m.id === activePayer ? 'selected' : ''}>
+      ${m.emoji} ${escapeHtml(m.name)} ${(!isEditing && m.id === worstDebtorId) ? '(měl/a by platit)' : ''}
+    </option>
+  `).join('');
+
+  let detectedMode = 'EQUAL';
+  if (isEditing && tx && tx.splits) {
+    if (tx.splitMode) {
+      detectedMode = tx.splitMode;
+    } else if (tx.shares) {
+      detectedMode = 'SHARES';
+    } else {
+      const splitVals = Object.values(tx.splits).filter(v => Number(v) > 0);
+      const isAllIdentical = splitVals.length > 0 && splitVals.every(v => Math.abs(v - splitVals[0]) < 0.05);
+      detectedMode = isAllIdentical ? 'EQUAL' : 'EXACT';
+    }
+  }
+
+  setSplitMode(detectedMode);
+
+  if (isEditing && tx && tx.splits) {
+    setTimeout(() => {
+      if (detectedMode === 'EQUAL') {
+        document.querySelectorAll('#equalMembersWrap .selected-pill').forEach(btn => {
+          const mid = btn.dataset.mid;
+          if (!tx.splits[mid] || Number(tx.splits[mid]) <= 0) {
+            btn.classList.remove('selected-pill', 'ring-2', 'ring-indigo-600', 'bg-indigo-50');
+          }
+        });
+      } else if (detectedMode === 'SHARES') {
+        document.querySelectorAll('.sh-inp').forEach(inp => {
+          const mid = inp.dataset.mid;
+          if (tx.shares && tx.shares[mid] !== undefined) {
+            inp.value = tx.shares[mid];
+          } else {
+            const splitAmt = Number(tx.splits[mid] || 0);
+            inp.value = splitAmt > 0 ? 1 : 0;
+          }
+        });
+      } else if (detectedMode === 'EXACT') {
+        const exactBase = tx.exactIndivSplits || tx.splits;
+        document.querySelectorAll('.ex-inp').forEach(inp => {
+          const mid = inp.dataset.mid;
+          inp.value = exactBase[mid] !== undefined ? exactBase[mid] : 0;
+        });
+        const otherInp = document.getElementById('exactOtherTipInp');
+        if (otherInp) otherInp.value = tx.otherExactAmount || '';
+      }
+      refreshExpenseSplitPreview();
+    }, 40);
+  }
+
+  openModal('expenseModal');
+}
+
+function saveExpenseFromModal() {
+  const grp = getActiveGroup();
+  const editingId = document.getElementById('editingExpenseId').value;
+  const title = document.getElementById('expTitleInp').value.trim();
+  const amt = parseFloat(document.getElementById('expAmountInp').value);
+
+  if (!title || isNaN(amt) || amt <= 0) {
+    showToast('⚠️ Zadejte popis a kladnou částku');
+    return;
+  }
+
+  const currency = document.getElementById('expCurrencyInp').value || grp.currency;
+  const customRate = currency === 'CZK' ? 1.0 : (parseFloat(document.getElementById('expCustomRateInp').value) || getCurrencyDefaultRateToCzk(grp, currency));
+  const category = document.getElementById('expCategoryInp').value;
+  const paidBy = document.getElementById('expPaidByInp').value;
+  const dateVal = document.getElementById('expDateInp').value.trim() || formatNowTimestamp();
+  const splits = {};
+  let sharesMap = null;
+  let exactIndivSplits = null;
+  let otherExactAmount = 0;
+
+  if (currentSplitMode === 'EQUAL') {
+    const selected = Array.from(document.querySelectorAll('#equalMembersWrap .selected-pill'));
+    if (selected.length === 0) {
+      showToast('⚠️ Vyberte alespoň 1 účastníka');
+      return;
+    }
+    const per = Number((amt / selected.length).toFixed(2));
+    selected.forEach(b => { splits[b.dataset.mid] = per; });
+  } else if (currentSplitMode === 'SHARES') {
+    const inps = Array.from(document.querySelectorAll('.sh-inp'));
+    const totalW = inps.reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+    if (totalW <= 0) {
+      showToast('⚠️ Součet vah musí být větší než 0');
+      return;
+    }
+    sharesMap = {};
+    inps.forEach(i => {
+      const rawVal = parseFloat(i.value);
+      const w = isNaN(rawVal) ? 0 : rawVal;
+      sharesMap[i.dataset.mid] = w;
+      if (w > 0) {
+        splits[i.dataset.mid] = Number((amt * (w / totalW)).toFixed(2));
+      }
+    });
+  } else {
+    const inps = Array.from(document.querySelectorAll('.ex-inp'));
+    otherExactAmount = parseFloat(document.getElementById('exactOtherTipInp')?.value) || 0;
+    exactIndivSplits = {};
+
+    const activeParticipants = [];
+    let sumIndiv = 0;
+
+    inps.forEach(i => {
+      const v = parseFloat(i.value) || 0;
+      if (v > 0) {
+        exactIndivSplits[i.dataset.mid] = Number(v.toFixed(2));
+        activeParticipants.push(i.dataset.mid);
+        sumIndiv += v;
+      }
+    });
+
+    const targetList = activeParticipants.length > 0 ? activeParticipants : (grp.members || []).map(m => m.id);
+    const otherPerPerson = targetList.length > 0 ? (otherExactAmount / targetList.length) : 0;
+
+    targetList.forEach(mId => {
+      const baseVal = exactIndivSplits[mId] || 0;
+      const finalVal = Number((baseVal + otherPerPerson).toFixed(2));
+      if (finalVal > 0) {
+        splits[mId] = finalVal;
+      }
+    });
+
+    const totalSum = sumIndiv + otherExactAmount;
+    if (Math.abs(totalSum - amt) > 0.25) {
+      showToast('⚠️ Součet částek + Ostatní neodpovídá celkové částce');
+      return;
+    }
+  }
+
+  if (editingId) {
+    const tx = (grp.expenses || []).find(t => t.id === editingId);
+    if (tx) {
+      tx.title = title;
+      tx.amount = amt;
+      tx.currency = currency;
+      tx.customRate = customRate;
+      tx.paymentMethod = currentPaymentMethod;
+      tx.category = category;
+      tx.paidBy = paidBy;
+      tx.date = dateVal;
+      tx.splits = splits;
+      tx.shares = sharesMap;
+      tx.exactIndivSplits = exactIndivSplits;
+      tx.otherExactAmount = otherExactAmount;
+      tx.splitMode = currentSplitMode;
+      tx.updatedAt = Date.now();
+      showToast(`✅ Útrata "${title}" upravena`);
+    }
+  } else {
+    grp.expenses.unshift({
+      id: 'tx-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      title,
+      category,
+      amount: amt,
+      currency,
+      customRate,
+      paymentMethod: currentPaymentMethod,
+      paidBy,
+      splits,
+      shares: sharesMap,
+      exactIndivSplits,
+      otherExactAmount,
+      splitMode: currentSplitMode,
+      date: dateVal,
+      updatedAt: Date.now()
+    });
+    showToast(`✅ Útrata "${title}" uložena`);
+  }
+
+  saveState();
+  closeModal('expenseModal');
+  renderApp();
+}
+
+function deleteCurrentExpenseWithButton() {
+  const grp = getActiveGroup();
+  const editingId = document.getElementById('editingExpenseId').value;
+  if (!editingId) return;
+
+  const tx = (grp.expenses || []).find(t => t.id === editingId);
+  const name = tx ? tx.title : 'Výdaj';
+
+  grp.expenses = grp.expenses.filter(t => t.id !== editingId);
+  saveState();
+  closeModal('expenseModal');
+  renderApp();
+  showToast(`🗑️ Smazáno: ${name}`);
+}
+
+/* ============================================================================
+   7. SPLIT CONTROLS
+   ============================================================================ */
+function setSplitMode(mode) {
+  currentSplitMode = mode;
+  ['EQUAL', 'SHARES', 'EXACT'].forEach(m => {
+    const btn = document.getElementById('splitBtn_' + m);
+    if (!btn) return;
+    btn.className = (m === mode)
+      ? 'py-2 text-xs font-extrabold rounded-lg bg-indigo-600 text-white'
+      : 'py-2 text-xs font-extrabold rounded-lg text-slate-600';
+  });
+  renderExpenseSplitControls();
+}
+
+function renderExpenseSplitControls() {
+  const grp = getActiveGroup();
+  const box = document.getElementById('expSplitParticipantsBox');
+  const members = grp.members || [];
+  const prevSplits = activeEditingSplitsBackup || {};
+  const prevShares = activeEditingSharesBackup || null;
+
+  if (currentSplitMode === 'EQUAL') {
+    box.innerHTML = `
+      <div class="text-[11px] font-bold text-slate-500 mb-2">Klepnutím vyberte účastníky:</div>
+      <div class="flex flex-wrap gap-2" id="equalMembersWrap">
+        ${members.map(m => {
+          const isSelected = activeEditingSplitsBackup ? (Number(prevSplits[m.id]) > 0) : true;
+          return `
+            <button type="button" data-mid="${m.id}" onclick="this.classList.toggle('ring-2'); this.classList.toggle('ring-indigo-600'); this.classList.toggle('bg-indigo-50'); this.classList.toggle('selected-pill'); refreshExpenseSplitPreview();" class="${isSelected ? 'selected-pill ring-2 ring-indigo-600 bg-indigo-50' : ''} px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border border-slate-200">
+              <span>${m.emoji}</span>
+              <span>${escapeHtml(m.name)}</span>
+              <span class="eq-preview text-[11px] text-indigo-700" data-mid="${m.id}"></span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+    `;
+  } else if (currentSplitMode === 'SHARES') {
+    box.innerHTML = `
+      <div class="text-[11px] font-bold text-slate-500 mb-2">Váhy podílu (2 pro pár, 1 jednotlivec, 0 neúčastnil se):</div>
+      <div class="space-y-1.5">
+        ${members.map(m => {
+          let shareVal = m.weight !== undefined ? m.weight : 1;
+          if (prevShares && prevShares[m.id] !== undefined) {
+            shareVal = prevShares[m.id];
+          } else if (activeEditingSplitsBackup) {
+            shareVal = Number(prevSplits[m.id] || 0) > 0 ? 1 : 0;
+          }
+          return `
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold">${m.emoji} ${escapeHtml(m.name)}</span>
+              <div class="flex items-center gap-2">
+                <span class="sh-preview text-xs font-bold text-indigo-600" data-mid="${m.id}">0</span>
+                <input type="number" step="0.5" min="0" value="${shareVal}" data-mid="${m.id}" oninput="onShareInputEdit(this)" class="sh-inp w-16 px-2 py-1 text-xs font-bold border border-slate-300 rounded-lg text-center bg-white">
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  } else {
+    box.innerHTML = `
+      <div class="flex justify-between text-[11px] font-bold text-slate-500 mb-2">
+        <span>Přesná částka pro každého:</span>
+        <span id="exactDiffBadge">Zbývá: 0</span>
+      </div>
+      <div class="space-y-1.5 mb-2.5">
+        ${members.map(m => {
+          const prevVal = prevSplits[m.id] !== undefined ? prevSplits[m.id] : '';
+          return `
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold">${m.emoji} ${escapeHtml(m.name)}</span>
+              <div class="flex items-center gap-2">
+                <span class="ex-final-preview text-[11px] font-semibold text-indigo-600" data-mid="${m.id}"></span>
+                <input type="number" step="0.01" min="0" placeholder="0.00" value="${prevVal}" data-mid="${m.id}" oninput="refreshExpenseSplitPreview()" class="ex-inp w-24 px-2.5 py-1 text-xs font-bold border border-slate-300 rounded-lg text-right bg-white">
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="pt-2.5 border-t border-slate-200 bg-amber-50/70 -mx-1 px-2.5 py-2 rounded-xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs font-extrabold text-amber-900">💁 Ostatní (dýško, spropitné, servis)</div>
+            <div class="text-[10px] text-amber-700" id="exactOtherPerPersonHint">Rozpočítá se rovným dílem mezi ty, co platili</div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button type="button" onclick="fillRemainderIntoOtherTip()" class="px-2 py-1 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-950 text-[10px] font-extrabold" title="Doplnit zbývající rozdíl do Ostatní">Doplnit zbytek</button>
+            <input type="number" step="0.01" min="0" id="exactOtherTipInp" placeholder="0.00" value="${activeEditingOtherAmountBackup || ''}" oninput="refreshExpenseSplitPreview()" class="w-20 px-2 py-1 text-xs font-black border border-amber-400 rounded-lg text-right bg-white">
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  refreshExpenseSplitPreview();
+}
+
+function fillRemainderIntoOtherTip() {
+  const amt = parseFloat(document.getElementById('expAmountInp').value) || 0;
+  const inps = Array.from(document.querySelectorAll('.ex-inp'));
+  const sumIndiv = inps.reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+  const rem = Math.max(0, Number((amt - sumIndiv).toFixed(2)));
+  const otherInp = document.getElementById('exactOtherTipInp');
+  if (otherInp) {
+    otherInp.value = rem > 0 ? rem : '';
+    refreshExpenseSplitPreview();
+  }
+}
+
+function onShareInputEdit(inp) {
+  if (!activeEditingSharesBackup) activeEditingSharesBackup = {};
+  const val = parseFloat(inp.value);
+  activeEditingSharesBackup[inp.dataset.mid] = isNaN(val) ? 0 : val;
+  refreshExpenseSplitPreview();
+}
+
+function refreshExpenseSplitPreview() {
+  updateExpenseCzkEqPreview();
+  const grp = getActiveGroup();
+  const amt = parseFloat(document.getElementById('expAmountInp').value) || 0;
+  const curr = document.getElementById('expCurrencyInp').value || grp.currency;
+
+  if (currentSplitMode === 'EQUAL') {
+    const pills = Array.from(document.querySelectorAll('#equalMembersWrap .selected-pill'));
+    const share = pills.length > 0 ? (amt / pills.length) : 0;
+    document.querySelectorAll('.eq-preview').forEach(el => {
+      const p = el.closest('button');
+      el.textContent = (p && p.classList.contains('selected-pill') && amt > 0) ? `(${share.toFixed(2)} ${curr})` : '';
+    });
+  } else if (currentSplitMode === 'SHARES') {
+    const inps = Array.from(document.querySelectorAll('.sh-inp'));
+    const totalW = inps.reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+    inps.forEach(i => {
+      const w = parseFloat(i.value) || 0;
+      const val = totalW > 0 ? (amt * (w / totalW)) : 0;
+      const prev = document.querySelector(`.sh-preview[data-mid="${i.dataset.mid}"]`);
+      if (prev) prev.textContent = `${val.toFixed(2)} ${curr}`;
+    });
+  } else {
+    const inps = Array.from(document.querySelectorAll('.ex-inp'));
+    const otherAmt = parseFloat(document.getElementById('exactOtherTipInp')?.value) || 0;
+    let sumIndiv = 0;
+    let activeCount = 0;
+
+    inps.forEach(i => {
+      const v = parseFloat(i.value) || 0;
+      sumIndiv += v;
+      if (v > 0) activeCount++;
+    });
+
+    const otherPer = activeCount > 0 ? (otherAmt / activeCount) : 0;
+    const hintEl = document.getElementById('exactOtherPerPersonHint');
+    if (hintEl) {
+      if (otherAmt > 0 && activeCount > 0) {
+        hintEl.textContent = `+${otherPer.toFixed(2)} ${curr} ke každému z ${activeCount} platících`;
+      } else {
+        hintEl.textContent = 'Rozpočítá se rovným dílem mezi ty, co platili';
+      }
+    }
+
+    inps.forEach(i => {
+      const v = parseFloat(i.value) || 0;
+      const prevEl = document.querySelector(`.ex-final-preview[data-mid="${i.dataset.mid}"]`);
+      if (prevEl) {
+        if (v > 0 && otherAmt > 0) {
+          prevEl.textContent = `celkem ${(v + otherPer).toFixed(2)} ${curr}`;
+        } else {
+          prevEl.textContent = '';
+        }
+      }
+    });
+
+    const totalSum = sumIndiv + otherAmt;
+    const diff = amt - totalSum;
+    const badge = document.getElementById('exactDiffBadge');
+    if (badge) {
+      if (Math.abs(diff) < 0.02) {
+        badge.innerHTML = `<span class="text-emerald-600 font-bold">✅ Součet sedí (${totalSum.toFixed(2)} ${curr})</span>`;
+      } else {
+        badge.innerHTML = `<span class="text-rose-600 font-bold">Zbývá: ${diff.toFixed(2)} ${curr}</span>`;
+      }
+    }
+  }
+}
+
+/* ============================================================================
+   8. QR PLATBA & VYROVNÁNÍ PŘETAŽENÍM
+   ============================================================================ */
+function czechAccountToIban(accountStr) {
+  if (!accountStr) return '';
+  const parts = accountStr.split('/');
+  if (parts.length !== 2) return '';
+  const bank = parts[1].padStart(4, '0');
+  let accParts = parts[0].split('-');
+  let prefix = '000000';
+  let acc = '';
+  if (accParts.length === 2) {
+    prefix = accParts[0].padStart(6, '0');
+    acc = accParts[1].padStart(10, '0');
+  } else {
+    acc = accParts[0].padStart(10, '0');
+  }
+  const bban = bank + prefix + acc;
+  const numeric = bban + '123500';
+  let rem = 0;
+  for (let i = 0; i < numeric.length; i++) {
+    rem = (rem * 10 + parseInt(numeric[i], 10)) % 97;
+  }
+  const checkDigit = String(98 - rem).padStart(2, '0');
+  return 'CZ' + checkDigit + bank + prefix + acc;
+}
+
+function drawDeterministicQrOnCanvas(canvas, value, scale = 1) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cleanVal = (value || 'DEMO').trim();
+  const modules = 33;
+  const cellSize = Math.round(5 * scale);
+  const margin = Math.round(2 * cellSize);
+  const size = modules * cellSize + margin * 2;
+
+  canvas.width = size;
+  canvas.height = size;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#000000';
+
+  const grid = Array.from({ length: modules }, () => Array(modules).fill(null));
+
+  function placeFinder(r0, c0) {
+    for (let r = -1; r <= 7; r++) {
+      for (let c = -1; c <= 7; c++) {
+        const rr = r0 + r, cc = c0 + c;
+        if (rr < 0 || rr >= modules || cc < 0 || cc >= modules) continue;
+        const inOuter = (r >= 0 && r <= 6 && (c === 0 || c === 6)) || (c >= 0 && c <= 6 && (r === 0 || r === 6));
+        const inInner = (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+        grid[rr][cc] = (inOuter || inInner) ? 1 : 0;
+      }
+    }
+  }
+  placeFinder(0, 0);
+  placeFinder(0, modules - 7);
+  placeFinder(modules - 7, 0);
+
+  const bits = [];
+  let seed = 2166136261;
+  for (let i = 0; i < cleanVal.length; i++) {
+    seed ^= cleanVal.charCodeAt(i);
+    seed = Math.imul(seed, 16777619);
+  }
+  for (let i = 0; i < modules * modules; i++) {
+    const charCode = cleanVal.charCodeAt(i % cleanVal.length);
+    seed ^= (charCode + i * 31);
+    seed = Math.imul(seed, 16777619);
+    bits.push((seed >>> 0) % 2 === 0 ? 1 : 0);
+  }
+
+  let bitIdx = 0;
+  for (let r = 0; r < modules; r++) {
+    for (let c = 0; c < modules; c++) {
+      if (grid[r][c] === null) grid[r][c] = bits[bitIdx++ % bits.length];
+      if (grid[r][c] === 1) {
+        ctx.fillRect(margin + c * cellSize, margin + r * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+}
+
+function openDragSettleModal(fromId, toId) {
+  activeDragSettlePair = { fromId, toId };
+  const grp = getActiveGroup();
+  const memFrom = grp.members.find(m => m.id === fromId);
+  const memTo = grp.members.find(m => m.id === toId);
+  if (!memFrom || !memTo) return;
+
+  document.getElementById('dragFromName').textContent = memFrom.name;
+  document.getElementById('dragFromAvatar').textContent = memFrom.emoji;
+  document.getElementById('dragFromAvatar').style.backgroundColor = memFrom.color;
+
+  document.getElementById('dragToName').textContent = memTo.name;
+  document.getElementById('dragToAvatar').textContent = memTo.emoji;
+  document.getElementById('dragToAvatar').style.backgroundColor = memTo.color;
+
+  document.getElementById('dragCurrLbl').textContent = grp.currency;
+
+  const settlements = calculateMinimumSettlements(grp);
+  const match = settlements.find(s => s.fromId === fromId && s.toId === toId);
+  const amt = match ? match.amountLocal : 0;
+
+  document.getElementById('dragSettleAmountInp').value = amt > 0 ? amt : '';
+  document.getElementById('dragSettleTypeInp').value = 'Vyrovnání';
+  document.getElementById('dragSettleMethodInp').value = 'CARD';
+  updateDragSettleQr();
+  openModal('dragSettleModal');
+}
+
+function updateDragSettleQr() {
+  const grp = getActiveGroup();
+  const toId = activeDragSettlePair.toId;
+  const memTo = grp.members.find(m => m.id === toId);
+  const amt = parseFloat(document.getElementById('dragSettleAmountInp').value) || 0;
+  const rate = getCurrencyDefaultRateToCzk(grp, grp.currency);
+  const amtCzk = Math.round(amt * rate);
+
+  document.getElementById('dragSettleCzkPreview').value = amtCzk + ' CZK';
+
+  const iban = czechAccountToIban(memTo?.account || '');
+  const badge = document.getElementById('dragToAccountBadge');
+  const subtext = document.getElementById('dragIbanSubtext');
+  const canvas = document.getElementById('dragQrCanvas');
+
+  badge.textContent = memTo?.account || 'Bez účtu';
+
+  if (iban && amtCzk > 0) {
+    subtext.textContent = `IBAN: ${iban}`;
+    const spd = `SPD*1.0*ACC:${iban}*AM:${amtCzk.toFixed(2)}*CC:CZK*MSG:Kvit vyrovnani`;
+    drawDeterministicQrOnCanvas(canvas, spd, 1.3);
+  } else {
+    subtext.textContent = 'Pro QR Platbu doplňte č. účtu';
+    const ctx = canvas.getContext('2d');
+    canvas.width = 150; canvas.height = 150;
+    ctx.fillStyle = '#f8fafc'; ctx.fillRect(0,0,150,150);
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(iban ? 'Zadejte částku' : 'Chybí číslo účtu', 75, 75);
+  }
+}
+
+function swapDragDirection() {
+  const temp = activeDragSettlePair.fromId;
+  activeDragSettlePair.fromId = activeDragSettlePair.toId;
+  activeDragSettlePair.toId = temp;
+  openDragSettleModal(activeDragSettlePair.fromId, activeDragSettlePair.toId);
+}
+
+function confirmDragSettlePayment() {
+  const amt = parseFloat(document.getElementById('dragSettleAmountInp').value);
+  if (isNaN(amt) || amt <= 0) {
+    showToast('⚠️ Zadejte kladnou částku');
+    return;
+  }
+  const grp = getActiveGroup();
+  const settleType = document.getElementById('dragSettleTypeInp').value || 'Vyrovnání';
+  const settleMethod = document.getElementById('dragSettleMethodInp').value || 'CARD';
+
+  grp.expenses.unshift({
+    id: 'tx-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    title: settleType === 'Záloha' ? 'Platba zálohy' : 'Vyrovnání dluhu',
+    category: settleType,
+    amount: amt,
+    currency: grp.currency,
+    customRate: getCurrencyDefaultRateToCzk(grp, grp.currency),
+    paymentMethod: settleMethod,
+    paidBy: activeDragSettlePair.fromId,
+    splits: { [activeDragSettlePair.toId]: amt },
+    splitMode: 'EXACT',
+    date: formatNowTimestamp(),
+    updatedAt: Date.now()
+  });
+
+  saveState();
+  closeModal('dragSettleModal');
+  renderApp();
+  showToast(`✅ ${settleType} zapsáno!`);
+}
+
+/* ============================================================================
+   9. VYKRESLENÍ FEEDU, DESTINACE, MĚN & SKUPIN
+   ============================================================================ */
+function getCategoryEmoji(cat) {
+  if (!cat) return '🧾';
+  if (cat.includes('Jídlo') || cat.includes('Beer')) return '🍺';
+  if (cat.includes('Kemp') || cat.includes('Ubytování')) return '⛺';
+  if (cat.includes('Muzea') || cat.includes('Vstupy')) return '🎟️';
+  if (cat.includes('Doprava') || cat.includes('Benzín')) return '⛽';
+  if (cat.includes('Záloha')) return '🏦';
+  if (cat.includes('Vyrovnání')) return '🤝';
+  return '🛒';
+}
+
+function applyHeroTheme(themeKey) {
+  const pal = THEME_PALETTES[themeKey] || THEME_PALETTES.purple;
+  document.documentElement.style.setProperty('--hero-bg', pal.bg);
+  document.documentElement.style.setProperty('--hero-bg-dark', pal.dark);
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute('content', pal.meta);
+}
+
+function renderApp() {
+  const grp = getActiveGroup();
+  if (!grp) return;
+
+  applyHeroTheme(grp.theme || 'purple');
+
+  const destEl = document.getElementById('heroDestinationLabel');
+  if (destEl) {
+    destEl.textContent = grp.destination ? `📍 ${grp.destination}` : `📍 ${grp.name}`;
+  }
+  const currBadge = document.getElementById('heroCurrenciesBadge');
+  if (currBadge) {
+    currBadge.textContent = (grp.currencies || []).map(c => c.code).join(' • ');
+  }
+
+  renderGroupTabsBar(grp);
+  buildBubblesForGroup(grp);
+  renderTransactionsFeed();
+  renderBottomSettlePreview(grp);
+  updateStorageMeter();
+}
+
+function renderGroupTabsBar(activeGrp) {
+  const bar = document.getElementById('groupTabsBar');
+  if (!bar) return;
+
+  const tabsHtml = appState.groups.map(g => {
+    const isAct = g.id === activeGrp.id;
+    return `
+      <button class="group-tab ${isAct ? 'active' : ''}" onclick="switchGroup('${g.id}')">
+        <span class="uppercase">${escapeHtml(g.name)}</span>
+        ${g.destination ? `<span class="text-[9px] font-semibold opacity-80 normal-case truncate max-w-[120px]">${escapeHtml(g.destination)}</span>` : ''}
+      </button>
+    `;
+  }).join('');
+
+  bar.innerHTML = tabsHtml + `
+    <button class="group-tab-add" onclick="createNewGroupPrompt()" title="Založit novou skupinu">+</button>
+  `;
+}
+
+function switchGroup(groupId) {
+  const found = appState.groups.find(g => g.id === groupId);
+  if (!found) return;
+  appState.activeGroupId = found.id;
+  saveState();
+  renderApp();
+}
+
+function renderTransactionsFeed() {
+  const grp = getActiveGroup();
+  const { totalSpent, totalSpentCzk } = computeGroupBalances(grp);
+
+  document.getElementById('groupTotalPill').textContent = `Výlet: ${totalSpent.toFixed(2)} ${grp.currency} (${totalSpentCzk.toLocaleString('cs-CZ')} Kč)`;
+
+  const membersById = {};
+  (grp.members || []).forEach(m => { membersById[m.id] = m; });
+
+  const searchQ = (document.getElementById('txSearchInput')?.value || '').trim().toLowerCase();
+  const allTx = grp.expenses || [];
+
+  const filtered = allTx.filter(tx => {
+    if (currentTxCategoryFilter !== 'ALL' && tx.category !== currentTxCategoryFilter) return false;
+    if (searchQ) {
+      const payerName = (membersById[tx.paidBy]?.name || '').toLowerCase();
+      const matchTitle = (tx.title || '').toLowerCase().includes(searchQ);
+      const matchPayer = payerName.includes(searchQ);
+      if (!matchTitle && !matchPayer) return false;
+    }
+    return true;
+  });
+
+  const sorted = getSortedExpenses(grp, filtered);
+
+  document.getElementById('txCountBadge').textContent = sorted.length;
+  const container = document.getElementById('transactionsContainer');
+
+  if (sorted.length === 0) {
+    container.innerHTML = `
+      <div class="py-12 px-4 text-center text-slate-400 text-sm">
+        Žádné transakce. Klepněte na zelené tlačítko <strong>+</strong> dole pro přidání útraty.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = sorted.map(tx => {
+    const payer = membersById[tx.paidBy] || { name: 'Člen', emoji: '👤', color: '#64748b' };
+    const involvedIds = Object.keys(tx.splits || {}).filter(id => Number(tx.splits[id]) > 0);
+    const emoji = getCategoryEmoji(tx.category);
+    const isSettle = isSettlementOrAdvance(tx.category);
+    const payIcon = tx.paymentMethod === 'CARD' ? '💳 Kartou' : '💵 Hotově';
+    const rateUsed = getExpenseRateToCzk(grp, tx);
+    const defaultRate = getCurrencyDefaultRateToCzk(grp, tx.currency);
+    const hasCustomRate = tx.currency !== 'CZK' && Math.abs(rateUsed - defaultRate) > 0.005;
+
+    const miniAvatarsHtml = involvedIds.map(id => {
+      const m = membersById[id] || { name: '?', emoji: '👤', color: '#94a3b8' };
+      return `<span class="mini-avatar" style="background:${m.color || '#64748b'};" title="${escapeHtml(m.name)}">${m.emoji || m.name.slice(0,1)}</span>`;
+    }).join('');
+
+    return `
+      <div class="tx-row ${isSettle ? 'bg-emerald-50/40' : ''}" onclick="openExpenseModal('${tx.id}')" title="Klepněte pro úpravu výdaje">
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div class="tx-avatar" style="background:${payer.color || '#0284c7'};">
+            ${payer.emoji || payer.name.slice(0, 1)}
+          </div>
+          <div class="min-w-0">
+            <div class="font-extrabold text-[15px] text-slate-900 flex items-center gap-1.5 truncate">
+              <span>${emoji}</span>
+              <span class="truncate">${escapeHtml(tx.title)}</span>
+              <span class="text-[10px] text-slate-500 font-bold bg-slate-100 px-1.5 py-0.5 rounded">${payIcon}</span>
+            </div>
+            <div class="text-xs text-slate-400 font-medium">
+              ${escapeHtml(tx.date || '')}
+              ${hasCustomRate ? `<span class="text-indigo-600 font-bold ml-1">(kurz ${rateUsed})</span>` : ''}
+              ${tx.otherExactAmount > 0 ? `<span class="text-amber-700 font-bold ml-1">(vč. dýška ${tx.otherExactAmount} ${tx.currency})</span>` : ''}
+            </div>
+            <div class="text-xs text-slate-500 mt-0.5">
+              <strong class="text-slate-700">${escapeHtml(payer.name)}</strong> zaplatil(a)
+            </div>
+          </div>
+        </div>
+
+        <div class="text-right flex flex-col items-end flex-shrink-0 ml-3">
+          <div class="text-base font-black ${isSettle ? 'text-emerald-600' : 'text-amber-600'}">
+            ${Number(tx.amount).toFixed(2)} ${escapeHtml(tx.currency)}
+          </div>
+          <div class="flex items-center justify-end mt-1.5">
+            ${miniAvatarsHtml}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderBottomSettlePreview(grp) {
+  const box = document.getElementById('bottomSettlePreview');
+  const settlements = calculateMinimumSettlements(grp);
+
+  if (settlements.length === 0) {
+    box.innerHTML = `<div class="text-xs font-bold text-emerald-600">🎉 Všechny dluhy ve skupině jsou vyrovnané!</div>`;
+    return;
+  }
+
+  box.innerHTML = settlements.slice(0, 3).map(s => `
+    <div onclick="openDragSettleModal('${s.fromId}', '${s.toId}')" class="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200 mb-1.5 cursor-pointer hover:border-indigo-400">
+      <div class="flex items-center gap-2 text-xs font-extrabold">
+        <span>${s.fromEmoji} ${escapeHtml(s.fromName)}</span>
+        <span class="text-slate-400">➔</span>
+        <span>${s.toEmoji} ${escapeHtml(s.toName)}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-black text-amber-600">${s.amountLocal.toFixed(2)} ${grp.currency}</span>
+        <span class="text-[11px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-lg">QR / Vyrovnat</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ============================================================================
+   10. NASTAVENÍ SKUPINY, DESTINACE A VÍCE MĚN
+   ============================================================================ */
+function openEditGroupModal() {
+  const grp = getActiveGroup();
+  normalizeGroupCurrencies(grp);
+  document.getElementById('grpEditNameInp').value = grp.name || '';
+  document.getElementById('grpEditDestInp').value = grp.destination || '';
+  document.getElementById('grpEditThemeInp').value = grp.theme || 'purple';
+  renderGroupCurrenciesEditor();
+  renderEditMembersList();
+  openModal('editGroupModal');
+}
+
+function renderGroupCurrenciesEditor() {
+  const grp = getActiveGroup();
+  normalizeGroupCurrencies(grp);
+  const box = document.getElementById('grpCurrenciesListBox');
+  if (!box) return;
+
+  box.innerHTML = (grp.currencies || []).map((c, idx) => {
+    const isCzk = c.code === 'CZK';
+    const isPrimary = idx === 0;
+    return `
+      <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-xl border ${isPrimary ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200'}">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-black px-2 py-0.5 rounded-lg ${isPrimary ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-800'}">${escapeHtml(c.code)}</span>
+          ${isPrimary ? '<span class="text-[10px] font-extrabold text-indigo-700">Hlavní měna</span>' : `<button type="button" onclick="setPrimaryCurrency(${idx})" class="text-[10px] font-bold text-slate-500 hover:text-indigo-600 underline">Nastavit jako hlavní</button>`}
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] text-slate-400">1 ${escapeHtml(c.code)} =</span>
+          <input type="number" step="0.001" value="${c.rate}" ${isCzk ? ' disabled' : ''} onchange="updateGroupCurrencyRate(${idx}, this.value)" class="w-20 px-2 py-1 text-xs font-bold border border-slate-300 rounded-lg text-right bg-white">
+          <span class="text-[10px] font-bold text-slate-600">CZK</span>
+          ${(!isCzk && grp.currencies.length > 1) ? `<button type="button" onclick="removeGroupCurrency(${idx})" class="text-rose-600 font-bold text-xs px-1.5">✕</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateGroupCurrencyRate(idx, val) {
+  const grp = getActiveGroup();
+  const rate = parseFloat(val);
+  if (!grp.currencies[idx] || isNaN(rate) || rate <= 0) return;
+  grp.currencies[idx].rate = rate;
+  grp.currency = grp.currencies[0].code;
+  grp.rateToCzk = grp.currencies[0].rate;
+  saveState();
+  renderApp();
+}
+
+function setPrimaryCurrency(idx) {
+  const grp = getActiveGroup();
+  if (!grp.currencies[idx]) return;
+  const chosen = grp.currencies.splice(idx, 1)[0];
+  grp.currencies.unshift(chosen);
+  grp.currency = grp.currencies[0].code;
+  grp.rateToCzk = grp.currencies[0].rate;
+  saveState();
+  renderGroupCurrenciesEditor();
+  renderApp();
+  showToast(`💱 Hlavní měna skupiny: ${grp.currency}`);
+}
+
+function addCurrencyToGroup() {
+  const grp = getActiveGroup();
+  const codeInp = document.getElementById('newCurrCodeInp');
+  const rateInp = document.getElementById('newCurrRateInp');
+  const code = (codeInp.value || '').trim().toUpperCase();
+  const rate = parseFloat(rateInp.value);
+
+  if (!code || code.length < 2) {
+    showToast('⚠️ Zadejte kód měny (např. PLN, HUF, USD)');
+    return;
+  }
+  if (isNaN(rate) || rate <= 0) {
+    showToast('⚠️ Zadejte platný kurz k CZK');
+    return;
+  }
+
+  const existing = grp.currencies.find(c => c.code === code);
+  if (existing) {
+    existing.rate = rate;
+  } else {
+    const czkIdx = grp.currencies.findIndex(c => c.code === 'CZK');
+    if (czkIdx >= 0) {
+      grp.currencies.splice(czkIdx, 0, { code, rate });
+    } else {
+      grp.currencies.push({ code, rate });
+    }
+  }
+
+  codeInp.value = '';
+  rateInp.value = '';
+  saveState();
+  renderGroupCurrenciesEditor();
+  renderApp();
+  showToast(`💱 Přidána měna ${code} (kurz ${rate} CZK)`);
+}
+
+function removeGroupCurrency(idx) {
+  const grp = getActiveGroup();
+  if (!grp.currencies[idx] || grp.currencies[idx].code === 'CZK') return;
+  const removed = grp.currencies.splice(idx, 1)[0];
+  grp.currency = grp.currencies[0].code;
+  grp.rateToCzk = grp.currencies[0].rate;
+  saveState();
+  renderGroupCurrenciesEditor();
+  renderApp();
+  showToast(`🗑️ Odebrána měna ${removed.code}`);
+}
+
+function previewThemeColor(themeKey) {
+  applyHeroTheme(themeKey);
+}
+
+function saveGroupHeaderSettings() {
+  const grp = getActiveGroup();
+  grp.name = document.getElementById('grpEditNameInp').value.trim() || grp.name;
+  grp.destination = document.getElementById('grpEditDestInp').value.trim();
+  grp.theme = document.getElementById('grpEditThemeInp').value || 'purple';
+  normalizeGroupCurrencies(grp);
+  saveState();
+  renderApp();
+  showToast('💾 Skupina, destinace a měny uloženy');
+}
+
+function renderEditMembersList() {
+  const grp = getActiveGroup();
+  const box = document.getElementById('editMembersListBox');
+  box.innerHTML = (grp.members || []).map(m => `
+    <div onclick="openEditSingleMemberModal('${m.id}')" class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 cursor-pointer hover:border-indigo-400">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="w-7 h-7 rounded-full flex items-center justify-center text-sm text-white" style="background:${m.color || '#0284c7'};">${m.emoji}</span>
+        <div class="min-w-0">
+          <div class="text-xs font-extrabold text-slate-900 truncate">${escapeHtml(m.name)}</div>
+          <div class="text-[11px] font-mono text-slate-500">${m.account ? escapeHtml(m.account) : 'Bez účtu'}</div>
+        </div>
+      </div>
+      <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">Upravit ➔</span>
+    </div>
+  `).join('');
+}
+
+function addMemberToActiveGroup() {
+  const grp = getActiveGroup();
+  const name = document.getElementById('newMemNameInp').value.trim();
+  const account = document.getElementById('newMemAccInp').value.trim();
+  if (!name) {
+    showToast('⚠️ Zadejte jméno člena');
+    return;
+  }
+  const color = AVATAR_BG_COLORS[grp.members.length % AVATAR_BG_COLORS.length];
+  grp.members.push({
+    id: 'm-' + Date.now(),
+    name,
+    emoji: '😎',
+    color,
+    weight: 1,
+    account
+  });
+  document.getElementById('newMemNameInp').value = '';
+  document.getElementById('newMemAccInp').value = '';
+  saveState();
+  renderEditMembersList();
+  renderApp();
+  showToast(`👤 Přidán člen: ${name}`);
+}
+
+function createNewGroupPrompt() {
+  const themes = ['lime', 'teal', 'amber', 'crimson', 'purple'];
+  const nextTheme = themes[appState.groups.length % themes.length];
+  const newGrp = {
+    id: 'grp-' + Date.now(),
+    name: `Skupina ${appState.groups.length + 1}`,
+    destination: 'ČR & Evropa',
+    syncCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+    theme: nextTheme,
+    currency: 'EUR',
+    rateToCzk: 25.0,
+    currencies: [
+      { code: 'EUR', rate: 25.0 },
+      { code: 'CZK', rate: 1.0 }
+    ],
+    isTemplate: false,
+    members: [
+      { id: 'm-' + Date.now() + '1', name: 'Petr', emoji: '🤠', color: '#0284c7', weight: 1, account: '123456789/0800' },
+      { id: 'm-' + Date.now() + '2', name: 'Jana', emoji: '🦊', color: '#059669', weight: 1, account: '987654321/0100' }
+    ],
+    expenses: []
+  };
+  appState.groups.push(newGrp);
+  appState.activeGroupId = newGrp.id;
+  saveState();
+  renderApp();
+  openEditGroupModal();
+  showToast('✨ Založena nová skupina');
+}
+
+function deleteActiveGroupWithButton() {
+  if (appState.groups.length <= 1) {
+    showToast('⚠️ Nelze smazat jedinou skupinu');
+    return;
+  }
+  const activeId = appState.activeGroupId;
+  appState.groups = appState.groups.filter(g => g.id !== activeId);
+  appState.activeGroupId = appState.groups[0].id;
+  saveState();
+  closeModal('editGroupModal');
+  renderApp();
+  showToast('🗑️ Skupina smazána');
+}
+
+/* ============================================================================
+   11. SYNCHRONIZACE & ZÁLOHY
+   ============================================================================ */
+function encodeCompactSyncPayload(grp) {
+  normalizeGroupCurrencies(grp);
+  const pack = {
+    v: APP_VERSION,
+    id: grp.id,
+    n: grp.name,
+    dst: grp.destination || '',
+    sc: grp.syncCode || 'SYNC01',
+    th: grp.theme,
+    c: grp.currency,
+    r: grp.rateToCzk,
+    crs: grp.currencies,
+    m: (grp.members || []).map(m => [m.id, m.name, m.emoji, m.color, m.weight || 1, m.account || '']),
+    e: (grp.expenses || []).map(x => [
+      x.id, x.title, x.category, x.amount, x.currency, x.paidBy, x.splits,
+      x.date, x.updatedAt || 0, x.splitMode || 'EQUAL', x.shares || null,
+      x.paymentMethod || 'CASH', x.customRate || null, x.otherExactAmount || 0, x.exactIndivSplits || null
+    ])
+  };
+  const jsonStr = JSON.stringify(pack);
+  return `KVIT1:${btoa(unescape(encodeURIComponent(jsonStr)))}`;
+}
+
+function importCompactSyncPayload(rawString, switchAfter = true) {
+  if (!rawString) return -1;
+  let clean = rawString.trim();
+  if (clean.includes('#sync=')) clean = decodeURIComponent(clean.split('#sync=')[1]);
+  if (clean.startsWith('KVIT1:')) clean = clean.slice(6);
+  else if (clean.startsWith('SSYNC1:')) clean = clean.slice(7);
+
+  try {
+    const jsonStr = decodeURIComponent(escape(atob(clean)));
+    const pack = JSON.parse(jsonStr);
+    if (!pack || !pack.id || !Array.isArray(pack.m)) return -1;
+
+    let targetGrp = appState.groups.find(g => g.id === pack.id || (pack.sc && g.syncCode === pack.sc));
+    let addedChanges = 0;
+
+    const incomingMembers = pack.m.map(arr => ({
+      id: arr[0], name: arr[1], emoji: arr[2], color: arr[3], weight: arr[4], account: arr[5]
+    }));
+
+    const incomingExpenses = (pack.e || []).map(arr => ({
+      id: arr[0], title: arr[1], category: arr[2], amount: arr[3], currency: arr[4],
+      paidBy: arr[5], splits: arr[6], date: arr[7], updatedAt: arr[8],
+      splitMode: arr[9] || 'EQUAL', shares: arr[10] || null,
+      paymentMethod: arr[11] || 'CASH', customRate: arr[12] || null,
+      otherExactAmount: arr[13] || 0, exactIndivSplits: arr[14] || null
+    }));
+
+    if (!targetGrp) {
+      targetGrp = {
+        id: pack.id,
+        name: pack.n || 'Sdílená skupina',
+        destination: pack.dst || '',
+        syncCode: pack.sc || 'SYNC01',
+        theme: pack.th || 'purple',
+        currency: pack.c || 'EUR',
+        rateToCzk: pack.r || 25.0,
+        currencies: pack.crs || [{ code: pack.c || 'EUR', rate: pack.r || 25.0 }, { code: 'CZK', rate: 1.0 }],
+        isTemplate: false,
+        members: incomingMembers,
+        expenses: incomingExpenses
+      };
+      appState.groups.push(targetGrp);
+      addedChanges = incomingExpenses.length;
+    } else {
+      if (pack.dst && !targetGrp.destination) targetGrp.destination = pack.dst;
+      if (Array.isArray(pack.crs)) targetGrp.currencies = pack.crs;
+
+      incomingMembers.forEach(im => {
+        const ex = targetGrp.members.find(m => m.id === im.id);
+        if (!ex) {
+          targetGrp.members.push(im);
+          addedChanges++;
+        } else if (im.account && !ex.account) {
+          ex.account = im.account;
+        }
+      });
+
+      incomingExpenses.forEach(ie => {
+        const exists = targetGrp.expenses.some(e => e.id === ie.id);
+        if (!exists) {
+          targetGrp.expenses.push(ie);
+          addedChanges++;
+        }
+      });
+    }
+
+    if (switchAfter) appState.activeGroupId = targetGrp.id;
+    saveState();
+    renderApp();
+    return addedChanges;
+  } catch (err) {
+    return -1;
+  }
+}
+
+function openSyncModal() {
+  const grp = getActiveGroup();
+  if (!grp.syncCode) {
+    grp.syncCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    saveState();
+  }
+  document.getElementById('cloudRoomCodeInp').value = grp.syncCode;
+
+  const savedUrl = localStorage.getItem(SERVER_URL_KEY) || DEFAULT_PI_SERVER_URL;
+  const urlInp = document.getElementById('piServerUrlInp');
+  if (urlInp) urlInp.value = savedUrl;
+
+  const payload = encodeCompactSyncPayload(grp);
+  drawDeterministicQrOnCanvas(document.getElementById('offlineSyncQrCanvas'), payload, 1.35);
+  openModal('syncModal');
+}
+
+function savePiServerUrl(url) {
+  const clean = (url || '').trim();
+  localStorage.setItem(SERVER_URL_KEY, clean);
+  showToast('💾 Adresa Pi serveru uložena');
+}
+
+function getPiServerUrl() {
+  return localStorage.getItem(SERVER_URL_KEY) || DEFAULT_PI_SERVER_URL;
+}
+
+async function pushGroupToPiServer() {
+  const grp = getActiveGroup();
+  const roomCode = (document.getElementById('cloudRoomCodeInp').value.trim() || grp.syncCode || 'ROAD01').toUpperCase();
+  grp.syncCode = roomCode;
+  saveState();
+
+  const serverUrl = getPiServerUrl();
+  const targetEndpoint = `${serverUrl}?room=${encodeURIComponent(roomCode)}`;
+  const statusSub = document.getElementById('piServerStatusSubtext');
+
+  if (statusSub) statusSub.textContent = 'Odesílám data na Pi...';
+
+  try {
+    const payload = encodeCompactSyncPayload(grp);
+    const res = await fetch(targetEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        room: roomCode,
+        name: grp.name,
+        payload: payload,
+        timestamp: Date.now()
+      })
+    });
+
+    if (res.ok) {
+      showToast(`🍓 Úspěšně uloženo na Pi (${roomCode})`);
+      if (statusSub) statusSub.textContent = `Uloženo na Pi: ${new Date().toLocaleTimeString('cs-CZ')}`;
+    } else {
+      throw new Error(`Server vrátil stav ${res.status}`);
+    }
+  } catch (err) {
+    showToast('⚠️ Spojení s Pi selhalo! Zkontroluj IP/URL adresu.');
+    if (statusSub) statusSub.textContent = 'Chyba připojení k Pi serveru';
+  }
+}
+
+async function pullGroupFromPiServer() {
+  const grp = getActiveGroup();
+  const roomCode = (document.getElementById('cloudRoomCodeInp').value.trim() || grp.syncCode || 'ROAD01').toUpperCase();
+  const serverUrl = getPiServerUrl();
+  const targetEndpoint = `${serverUrl}?room=${encodeURIComponent(roomCode)}`;
+  const statusSub = document.getElementById('piServerStatusSubtext');
+
+  if (statusSub) statusSub.textContent = 'Stahuji data z Pi...';
+
+  try {
+    const res = await fetch(targetEndpoint, { method: 'GET' });
+    if (res.status === 404) {
+      showToast('⚠️ Místnost na Pi serveru zatím neexistuje');
+      if (statusSub) statusSub.textContent = 'Skupina nenalezena na serveru';
+      return;
+    }
+
+    if (!res.ok) throw new Error(`Server vrátil stav ${res.status}`);
+
+    const data = await res.json();
+    if (data && data.payload) {
+      const added = importCompactSyncPayload(data.payload, true);
+      showToast(`🍓 Staženo z Pi (+${added} položek)`);
+      if (statusSub) statusSub.textContent = `Aktualizováno z Pi: ${new Date().toLocaleTimeString('cs-CZ')}`;
+      closeModal('syncModal');
+    }
+  } catch (err) {
+    showToast('⚠️ Nelze se spojit s Pi serverem. Zkontroluj síť.');
+    if (statusSub) statusSub.textContent = 'Chyba spojení se serverem';
+  }
+}
+
+function switchSyncTab(tab) {
+  const isFb = tab === 'FIREBASE';
+  const isOff = tab === 'OFFLINE';
+  const isOn = tab === 'ONLINE';
+
+  document.getElementById('syncFirebasePanel').classList.toggle('hidden', !isFb);
+  document.getElementById('syncOfflinePanel').classList.toggle('hidden', !isOff);
+  document.getElementById('syncOnlinePanel').classList.toggle('hidden', !isOn);
+
+  const activeCls = 'py-2.5 text-xs font-extrabold rounded-lg bg-indigo-600 text-white';
+  const inactiveCls = 'py-2.5 text-xs font-extrabold rounded-lg text-slate-700';
+
+  document.getElementById('syncTabBtnFirebase').className = isFb ? activeCls : inactiveCls;
+  document.getElementById('syncTabBtnOffline').className = isOff ? activeCls : inactiveCls;
+  document.getElementById('syncTabBtnOnline').className = isOn ? activeCls : inactiveCls;
+}
+
+function copyOfflineSyncString() {
+  copyToClipboard(encodeCompactSyncPayload(getActiveGroup()));
+}
+
+function applyManualSyncInput() {
+  const raw = document.getElementById('manualSyncCodeInp').value.trim();
+  const count = importCompactSyncPayload(raw, true);
+  if (count >= 0) {
+    document.getElementById('manualSyncCodeInp').value = '';
+    closeModal('syncModal');
+    showToast(`✅ Offline synchronizace dokončena (+${count} nových položek)`);
+  } else {
+    showToast('⚠️ Neplatný synchronizační kód');
+  }
+}
+
+function copyCloudRoomCode() {
+  copyToClipboard(document.getElementById('cloudRoomCodeInp').value.trim().toUpperCase());
+}
+
+function copyShareableUrlLink() {
+  const payload = encodeCompactSyncPayload(getActiveGroup());
+  const url = `${window.location.origin}${window.location.pathname}#sync=${encodeURIComponent(payload)}`;
+  copyToClipboard(url);
+  showToast('🔗 Synchronizační URL odkaz zkopírován do schránky');
+}
+
+/* ============================================================================
+   12. VYROVNÁNÍ VŠECH DLUHŮ & EXPORTY
+   ============================================================================ */
+function openSettleAllModal() {
+  const grp = getActiveGroup();
+  const settlements = calculateMinimumSettlements(grp);
+  const box = document.getElementById('settleAllListContainer');
+
+  if (settlements.length === 0) {
+    box.innerHTML = `<div class="p-6 text-center text-emerald-600 font-bold text-sm">🎉 Všichni členové jsou vyrovnaní!</div>`;
+  } else {
+    box.innerHTML = settlements.map(s => `
+      <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+        <div>
+          <div class="text-sm font-black text-slate-900">
+            ${s.fromEmoji} ${escapeHtml(s.fromName)} <span class="text-indigo-600">➔</span> ${s.toEmoji} ${escapeHtml(s.toName)}
+          </div>
+          <div class="text-xs text-slate-500 font-mono">
+            Účet: ${s.toAccount ? escapeHtml(s.toAccount) : 'Nezadán'}
+          </div>
+        </div>
+        <div class="text-right flex items-center gap-2">
+          <div>
+            <div class="text-sm font-black text-amber-600">${s.amountLocal.toFixed(2)} ${grp.currency}</div>
+            <div class="text-[11px] font-bold text-slate-500">${s.amountCzk.toLocaleString('cs-CZ')} CZK</div>
+          </div>
+          <button onclick="closeModal('settleAllModal'); openDragSettleModal('${s.fromId}', '${s.toId}');" class="px-3 py-2 rounded-xl bg-indigo-600 text-white text-xs font-black">
+            📱 QR Platba
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  openModal('settleAllModal');
+}
+
+function copyWhatsAppSummary() {
+  const grp = getActiveGroup();
+  const { totalSpent, totalSpentCzk } = computeGroupBalances(grp);
+  const settlements = calculateMinimumSettlements(grp);
+
+  const lines = [
+    `🤝 *Kvit (v${APP_VERSION}) — ${grp.name}*`,
+    grp.destination ? `📍 Destinace: ${grp.destination}` : '',
+    `💰 Celková útrata výletu: *${totalSpent.toFixed(2)} ${grp.currency}* (${totalSpentCzk.toLocaleString('cs-CZ')} CZK)`,
+    `----------------------------`
+  ].filter(Boolean);
+
+  if (settlements.length === 0) {
+    lines.push(`✅ Všichni jsou vyrovnaní! Jsme si kvit.`);
+  } else {
+    settlements.forEach(s => {
+      lines.push(`• ${s.fromEmoji} *${s.fromName}* ➔ ${s.toEmoji} *${s.toName}*: *${s.amountLocal.toFixed(2)} ${grp.currency}* (${s.amountCzk} CZK) ${s.toAccount ? `[Účet: ${s.toAccount}]` : ''}`);
+    });
+  }
+  copyToClipboard(lines.join('\n'));
+}
+
+function toggleSearchBox() {
+  const bar = document.getElementById('searchFilterBar');
+  bar.classList.toggle('hidden');
+  if (!bar.classList.contains('hidden')) document.getElementById('txSearchInput').focus();
+}
+
+function clearSearchFilter() {
+  document.getElementById('txSearchInput').value = '';
+  setTxCategoryFilter('ALL');
+  document.getElementById('searchFilterBar').classList.add('hidden');
+}
+
+function setTxCategoryFilter(cat) {
+  currentTxCategoryFilter = cat;
+  document.querySelectorAll('.tx-cat-btn').forEach(btn => {
+    const isAct = btn.getAttribute('data-cat') === cat;
+    btn.className = isAct
+      ? 'tx-cat-btn px-2.5 py-1 rounded-lg bg-indigo-600 text-white whitespace-nowrap'
+      : 'tx-cat-btn px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 whitespace-nowrap';
+  });
+  renderTransactionsFeed();
+}
+
+function exportAllDataJSON() {
+  const blob = new Blob([JSON.stringify(appState, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kvit-v${APP_VERSION}-zaloha-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('⬇️ Záloha JSON stažena');
+}
+
+function importAllDataJSON(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed && Array.isArray(parsed.groups)) {
+        appState = parsed;
+        appState.version = APP_VERSION;
+        (appState.groups || []).forEach(normalizeGroupCurrencies);
+        saveState();
+        closeModal('drawerModal');
+        renderApp();
+        showToast('✅ Databáze obnovena ze zálohy');
+      }
+    } catch (err) {
+      showToast('⚠️ Neplatný soubor JSON');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function resetToDefaultDemo() {
+  appState = getDefaultDemoState();
+  saveState();
+  closeModal('drawerModal');
+  renderApp();
+  showToast('🔄 Vzorová data obnovena');
+}
+
+/* ============================================================================
+   13. VÝSTUP DO PDF / TISK
+   ============================================================================ */
+function printGroupSettlementReport() {
+  const grp = getActiveGroup();
+  const { totalSpent, totalSpentCzk, balances } = computeGroupBalances(grp);
+  const settlements = calculateMinimumSettlements(grp);
+  const membersById = {};
+  (grp.members || []).forEach(m => { membersById[m.id] = m; });
+
+  const nowStr = new Date().toLocaleString('cs-CZ', { dateStyle: 'long', timeStyle: 'short' });
+  const currenciesSummary = (grp.currencies || []).map(c => c.code === 'CZK' ? 'CZK' : `1 ${c.code} = ${c.rate} CZK`).join(' • ');
+
+  const settlementsHtml = settlements.length > 0 ? settlements.map(s => `
+    <div class="pdf-settle-card">
+      <strong>${escapeHtml(s.fromName)} ➔ ${escapeHtml(s.toName)}:</strong>
+      <span style="font-weight:900;margin-left:8px;">${s.amountLocal.toFixed(2)} ${grp.currency}</span>
+      <span style="color:#555;margin-left:6px;">(${s.amountCzk.toLocaleString('cs-CZ')} CZK)</span>
+      <span style="float:right;font-family:monospace;font-size:9pt;color:#333;">Účet: ${escapeHtml(s.toAccount || 'Nezadán')}</span>
+    </div>
+  `).join('') : '<p>Všechny závazky jsou srovnány. Nikdo nikomu nedluží.</p>';
+
+  const balancesTableRows = balances.map(b => {
+    const netSign = b.net > 0 ? '+' : '';
+    const netColor = b.net > 0.01 ? '#047857' : (b.net < -0.01 ? '#b91c1c' : '#333333');
+    const settleNet = b.settleSent - b.settleReceived;
+    const settleSign = settleNet > 0 ? '+' : '';
+    return `
+      <tr>
+        <td><strong>${b.emoji} ${escapeHtml(b.name)}</strong></td>
+        <td style="font-family:monospace;">${escapeHtml(b.account || '—')}</td>
+        <td style="text-align:right;">${b.paidExpense.toFixed(2)} ${grp.currency}</td>
+        <td style="text-align:right;font-weight:bold;">${b.tripCostShare.toFixed(2)} ${grp.currency}</td>
+        <td style="text-align:right;color:#555;">${settleSign}${settleNet.toFixed(2)} ${grp.currency}</td>
+        <td style="text-align:right;font-weight:bold;color:${netColor};">
+          ${netSign}${b.net.toFixed(2)} ${grp.currency} (${netSign}${b.netCzk.toLocaleString('cs-CZ')} Kč)
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const sortedExpenses = getSortedExpenses(grp, grp.expenses || []);
+  const expensesTableRows = sortedExpenses.map(tx => {
+    const payer = membersById[tx.paidBy]?.name || '—';
+    const payWay = tx.paymentMethod === 'CARD' ? 'Kartou' : 'Hotově';
+    const rateUsed = getExpenseRateToCzk(grp, tx);
+    const splitDetails = Object.keys(tx.splits || {})
+      .filter(mId => Number(tx.splits[mId]) > 0)
+      .map(mId => `${membersById[mId]?.name || '?'}: ${Number(tx.splits[mId]).toFixed(2)} ${tx.currency}`)
+      .join(', ');
+
+    return `
+      <tr>
+        <td style="white-space:nowrap;">${escapeHtml(tx.date || '—')}</td>
+        <td>
+          <strong>${escapeHtml(tx.title)}</strong><br>
+          <span style="font-size:8pt;color:#555;">${escapeHtml(tx.category)} • ${payWay}${tx.currency !== 'CZK' ? ` • Kurz: ${rateUsed}` : ''}</span>
+        </td>
+        <td>${escapeHtml(payer)}</td>
+        <td style="text-align:right;font-weight:bold;white-space:nowrap;">${Number(tx.amount).toFixed(2)} ${escapeHtml(tx.currency)}</td>
+        <td style="font-size:8.5pt;color:#333;">${splitDetails || 'Rovným dílem'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const reportArea = document.getElementById('printReportArea');
+  reportArea.innerHTML = `
+    <div class="pdf-title-block">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+        <div>
+          <h1 class="pdf-h1">Kvit — Vyúčtování: ${escapeHtml(grp.name)}</h1>
+          ${grp.destination ? `<div style="font-size:11pt;font-weight:bold;margin-bottom:2px;">📍 Destinace: ${escapeHtml(grp.destination)}</div>` : ''}
+          <div class="pdf-meta">Vygenerováno: ${nowStr} • Aplikace Kvit v${APP_VERSION}</div>
+          <div class="pdf-meta">Kurzy: ${escapeHtml(currenciesSummary)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:16pt;font-weight:900;">${totalSpent.toFixed(2)} ${grp.currency}</div>
+          <div style="font-size:9.5pt;color:#555;">≈ ${totalSpentCzk.toLocaleString('cs-CZ')} CZK</div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="pdf-h2">1. Konečné vyrovnání plateb (Kdo komu posílá peníze)</h2>
+    ${settlementsHtml}
+
+    <h2 class="pdf-h2">2. Rozpad na jednotlivé osoby (Náklady na výlet vs. Vyrovnání zvlášť)</h2>
+    <table class="pdf-table">
+      <thead>
+        <tr>
+          <th>Člen</th>
+          <th>Bankovní účet</th>
+          <th style="text-align:right;">Zaplatil(a) za výlet</th>
+          <th style="text-align:right;">Náklady na výlet osoby</th>
+          <th style="text-align:right;">Vyrovnání / Zálohy</th>
+          <th style="text-align:right;">Výsledná bilance (Zůstatek)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${balancesTableRows}
+      </tbody>
+    </table>
+
+    <h2 class="pdf-h2">3. Podrobný seznam všech útrat s rozpisem na osoby</h2>
+    <table class="pdf-table">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Položka, Kategorie & Platba</th>
+          <th>Kdo platil</th>
+          <th style="text-align:right;">Částka</th>
+          <th>Rozpočítání na jednotlivé účastníky</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${expensesTableRows || '<tr><td colspan="5" style="text-align:center;padding:12px;">Žádné zapsané položky.</td></tr>'}
+      </tbody>
+    </table>
+
+    <div class="pdf-footer">
+      Vygenerováno offline aplikací <strong>Kvit v${APP_VERSION}</strong> • Jsme si kvit
+    </div>
+  `;
+
+  window.print();
+}
+
+function openModal(id) {
+  const m = document.getElementById(id);
+  if (m) m.classList.add('active');
+}
+
+function closeModal(id) {
+  const m = document.getElementById(id);
+  if (m) m.classList.remove('active');
+}
+
+function showToast(msg) {
+  const box = document.getElementById('toastBox');
+  if (!box) return;
+  box.textContent = msg;
+  box.style.display = 'block';
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => { box.style.display = 'none'; }, 2400);
+}
+
+function copyToClipboard(text) {
+  if (!text) return;
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('📋 Zkopírováno do schránky');
+  } catch (e) {
+    showToast('Chyba při kopírování');
+  }
+  document.body.removeChild(ta);
+}
+
+function formatNowTimestamp() {
+  return new Date().toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  initBubbleCanvasEvents();
+  renderApp();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service_worker.js').catch(err => {
+      console.warn('Service Worker registrace selhala:', err);
+    });
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+"name": "Kvit — Vyrovnávač společných útrat",
+"short_name": "Kvit",
+"start_url": "./index.html",
+"display": "standalone",
+"orientation": "portrait",
+"background_color": "#6c42c4",
+"theme_color": "#6c42c4",
+"icons": [
+{
+"src": "data:image/svg+xml;utf8,🤝",
+"sizes": "512x512",
+"type": "image/svg+xml",
+"purpose": "any maskable"
+}
+]
+}
