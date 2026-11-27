@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kvit-v1.5.2';
+const CACHE_NAME = 'kvit-v1.5.3';
 
 const CORE_ASSETS = [
   './',
