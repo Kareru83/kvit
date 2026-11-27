@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Kvit">
   <title>Kvit v1.5 — Vyrovnávač společných útrat</title>
-  <link rel="manifest" href="./manifest.json?v=1.5.1">
+  <link rel="manifest" href="./manifest.json?v=1.5.2">
   <link rel="icon" type="image/png" sizes="192x192" href="./icon-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="./icon-512x512.png">
   <link rel="apple-touch-icon" href="./icon-192x192.png">
@@ -1184,7 +1184,7 @@
         <span class="text-xl">🤝</span>
         <div>
           <h3 class="text-base font-black">Kvit</h3>
-          <span class="text-[11px] font-extrabold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">verze 1.5 (v1.5.1)</span>
+          <span class="text-[11px] font-extrabold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">verze 1.5 (v1.5.2)</span>
         </div>
       </div>
       <button onclick="closeModal('drawerModal')" class="text-xs font-bold bg-slate-100 px-3 py-1.5 rounded-xl">Zavřít</button>
@@ -1404,13 +1404,25 @@ async handleAuthAction() {
     }
 
     try {
-      if (this.isStandalonePWA()) {
-        await signInWithRedirect(auth, provider);
-      } else {
-        await signInWithPopup(auth, provider);
+      const res = await signInWithPopup(auth, provider);
+      if (res && res.user && typeof showToast === 'function') {
+        showToast(`✅ Přihlášeno jako ${res.user.displayName || res.user.email}`);
       }
     } catch (err) {
-      if (
+      if (err.code === 'auth/popup-blocked') {
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redErr) {
+          if (typeof showToast === 'function') {
+            showToast('❌ Chyba přesměrování: ' + (redErr.code || redErr.message));
+          }
+        }
+      } else if (err.code === 'auth/unauthorized-domain') {
+        if (typeof showToast === 'function') {
+          showToast('❌ Doména ' + window.location.hostname + ' není povolena ve Firebase Console!');
+        }
+      } else if (
         err.code !== 'auth/popup-closed-by-user' &&
         err.code !== 'auth/cancelled-popup-request' &&
         typeof showToast === 'function'
@@ -1575,7 +1587,7 @@ onAuthStateChanged(auth, async (user) => {
 /* ============================================================================
    1. GLOBÁLNÍ DATA & KONFIGURACE v1.5
    ============================================================================ */
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.5.2';
 const STORAGE_KEY = 'KVIT_APP_DATA_V15';
 const SERVER_URL_KEY = 'KVIT_PI_SERVER_URL';
 const MAX_STORAGE_BYTES = 5 * 1024 * 1024;
@@ -4421,7 +4433,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // Registrace Service Workeru při load stejně jako v H5One.html
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js?v=' + APP_VERSION, { scope: './' })
+    navigator.serviceWorker.register('./service-worker.js', { scope: './' })
       .then(reg => {
         console.log('Kvit PWA: Active');
         reg.update().catch(() => {});

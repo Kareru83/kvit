@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kvit-v1.5.1';
+const CACHE_NAME = 'kvit-v1.5.2';
 
 const CORE_ASSETS = [
   './',
@@ -21,24 +21,24 @@ const BYPASS_HOSTS = [
   'identitytoolkit.googleapis.com',
   'securetoken.googleapis.com',
   'www.googleapis.com',
+  'firebase.googleapis.com',
   'firebaseinstallations.googleapis.com',
   'firebaseio.com',
   'firebaseapp.com',
-  'accounts.google.com'
+  'accounts.google.com',
+  'apis.google.com'
 ];
 
 // Instalace - odolné uložení základních souborů, Tailwind CSS a ikon do cache
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // 1. Lokální soubory a ikony
       await Promise.allSettled(
         CORE_ASSETS.map((url) =>
           cache.add(url).catch((err) => console.warn('Kvit SW: Nepodařilo se kešovat lokální soubor:', url, err))
         )
       );
 
-      // 2. Externí skripty (Tailwind CSS + Firebase SDK) včetně podpory opaque odpovědí
       await Promise.allSettled(
         EXTERNAL_ASSETS.map(async (url) => {
           try {
@@ -95,6 +95,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Nikdy nezachytávat OAuth přesměrování Firebase Auth
+  if (url.pathname.startsWith('/__/auth') || url.pathname.startsWith('/__/firebase')) {
+    return;
+  }
+
   // Neblokujeme živou komunikaci s Firebase ani synchronizaci na lokální Raspberry Pi server
   if (
     BYPASS_HOSTS.some((host) => url.hostname === host || url.hostname.endsWith('.' + host)) ||
@@ -103,8 +108,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Pro hlavní HTML dokument použijeme Network-First (online vždy čerstvá verze, offline fallback z cache)
-  if (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/')) {
+  // Pro hlavní HTML dokument na vlastní doméně použijeme Network-First
+  if (
+    url.origin === self.location.origin &&
+    (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/'))
+  ) {
     event.respondWith(
       fetch(req)
         .then((networkResponse) => {
@@ -139,4 +147,11 @@ self.addEventListener('fetch', (event) => {
         });
     })
   );
+});
+
+// Okamžitá aktivace nového Service Workeru na vyžádání
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
